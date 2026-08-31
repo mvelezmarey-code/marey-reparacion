@@ -8,7 +8,6 @@ export default function NuevoBatch({ onBack, onCreado }) {
   const [items, setItems] = useState([{ modelo: MODELOS[0], cantidad: 1 }]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   function modelosDisponiblesPara(indiceActual) {
     const yaUsados = items.filter((_, i) => i !== indiceActual).map((it) => it.modelo);
@@ -44,7 +43,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
     setItems(copia);
   }
 
-  async function validarYPedirConfirmacion() {
+  async function crear() {
     if (!numero.trim()) {
       setError("Escribe el número de transferencia.");
       return;
@@ -59,95 +58,45 @@ export default function NuevoBatch({ onBack, onCreado }) {
       return;
     }
 
-    const { data: existente } = await supabase
-      .from("batches")
-      .select("id")
-      .eq("numero_transferencia", numero.trim())
-      .maybeSingle();
-
-    if (existente) {
-      setError("Ese número de transferencia ya existe. Usa uno distinto.");
-      return;
-    }
-
     setError("");
-    setMostrarConfirmacion(true);
-  }
-
-  async function crear() {
     setGuardando(true);
 
-    const { data: batch, error: errBatch } = await supabase
-      .from("batches")
-      .insert({ numero_transferencia: numero.trim(), estado: "recibido" })
-      .select()
-      .single();
+    try {
+      const { data: batch, error: errBatch } = await supabase
+        .from("batches")
+        .insert({ numero_transferencia: numero.trim(), estado: "recibido" })
+        .select()
+        .single();
 
-    if (errBatch) {
-      const mensaje = errBatch.message.includes("unique")
-        ? "Ese número de transferencia ya existe. Usa uno distinto."
-        : errBatch.message;
-      setError(mensaje);
+      if (errBatch) {
+        const mensaje = errBatch.message.includes("duplicate") || errBatch.message.includes("unique")
+          ? "Ese número de transferencia ya existe. Usa uno distinto."
+          : errBatch.message;
+        setError(mensaje);
+        setGuardando(false);
+        return;
+      }
+
+      const rows = items.map((it) => ({
+        batch_id: batch.id,
+        modelo_codigo: it.modelo,
+        cantidad_declarada: Number(it.cantidad),
+      }));
+      const { error: errItems } = await supabase.from("batch_items").insert(rows);
+
+      if (errItems) {
+        setError(errItems.message);
+        setGuardando(false);
+        return;
+      }
+
       setGuardando(false);
-      setMostrarConfirmacion(false);
-      return;
-    }
-
-    const rows = items.map((it) => ({
-      batch_id: batch.id,
-      modelo_codigo: it.modelo,
-      cantidad_declarada: Number(it.cantidad),
-    }));
-    const { error: errItems } = await supabase.from("batch_items").insert(rows);
-
-    if (errItems) {
-      setError(errItems.message);
+      onCreado(batch);
+    } catch (e) {
+      console.error("Error creando batch:", e);
+      setError("Ocurrió un error inesperado. Intenta de nuevo.");
       setGuardando(false);
-      setMostrarConfirmacion(false);
-      return;
     }
-
-    setGuardando(false);
-    onCreado(batch);
-  }
-
-  const totalUnidades = items.reduce((a, it) => a + (Number(it.cantidad) || 0), 0);
-
-  if (mostrarConfirmacion) {
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-        <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
-          <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
-          <div style={{ background: "#f4f3ee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
-            <p style={{ fontSize: 13, margin: "0 0 10px" }}><strong>Transferencia:</strong> {numero}</p>
-            {items.map((it, i) => (
-              <p key={i} style={{ fontSize: 13, margin: "4px 0" }}>{it.modelo} · {it.cantidad} unidad(es)</p>
-            ))}
-            <div style={{ borderTop: "0.5px solid #ddd", marginTop: 10, paddingTop: 10 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "#185fa5" }}>
-                Total: {totalUnidades} unidad{totalUnidades !== 1 ? "es" : ""}
-              </p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={() => setMostrarConfirmacion(false)}
-              disabled={guardando}
-              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, border: "0.5px solid #ddd", borderRadius: 10, background: "#fff" }}
-            >
-              No, revisar
-            </button>
-            <button
-              onClick={crear}
-              disabled={guardando}
-              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
-            >
-              {guardando ? "Guardando..." : "Sí, confirmar"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -193,16 +142,21 @@ export default function NuevoBatch({ onBack, onCreado }) {
         + Agregar modelo
       </button>
 
-      {error && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 12 }}>{error}</p>}
+      {error && (
+        <p style={{ fontSize: 13, color: "#a32d2d", background: "#fbeaea", padding: "10px 12px", borderRadius: 8, marginBottom: 16 }}>
+          {error}
+        </p>
+      )}
 
       <button
-        onClick={validarYPedirConfirmacion}
+        onClick={crear}
+        disabled={guardando}
         style={{
           width: "100%", padding: 14, fontSize: 15, fontWeight: 600,
-          background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
+          background: guardando ? "#8bb3d9" : "#185fa5", color: "#fff", border: "none", borderRadius: 12,
         }}
       >
-        Confirmar recepción del batch
+        {guardando ? "Guardando..." : "Confirmar recepción del batch"}
       </button>
     </div>
   );
