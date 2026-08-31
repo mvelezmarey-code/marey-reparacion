@@ -14,6 +14,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [catalogoDecisiones, setCatalogoDecisiones] = useState([]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const startedAt = useState(() => new Date().toISOString())[0];
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
 
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
 
-  async function guardar() {
+  function validarYPedirConfirmacion() {
     if (!oldSnNa && !oldSn.trim()) {
       setError("Escanea el Old SN o marca que no tiene número de serie.");
       return;
@@ -70,8 +71,11 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       setError("Esta decisión requiere escanear el nuevo número de serie.");
       return;
     }
-
     setError("");
+    setMostrarConfirmacion(true);
+  }
+
+  async function guardar() {
     setGuardando(true);
 
     const { error: errInsert } = await supabase.from("unidades").insert({
@@ -90,16 +94,50 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
 
     if (errInsert) {
       setError(errInsert.message);
+      setMostrarConfirmacion(false);
       return;
     }
     onGuardada();
   }
 
+  if (mostrarConfirmacion) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+          <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
+          <div style={{ background: "#f4f3ee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
+            <p style={{ fontSize: 13, margin: "0 0 6px" }}><strong>Modelo:</strong> {modelo}</p>
+            <p style={{ fontSize: 13, margin: "0 0 6px" }}><strong>Old SN:</strong> {oldSnNa ? "Sin serial" : oldSn}</p>
+            <p style={{ fontSize: 13, margin: "0 0 6px" }}><strong>Piezas:</strong> {piezas.join(", ")}</p>
+            <p style={{ fontSize: 13, margin: "0 0 6px" }}><strong>Decisión:</strong> {decision}</p>
+            {requiereNewSn && <p style={{ fontSize: 13, margin: 0 }}><strong>New SN:</strong> {newSn}</p>}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => setMostrarConfirmacion(false)}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, border: "0.5px solid #ddd", borderRadius: 10, background: "#fff" }}
+            >
+              No, revisar
+            </button>
+            <button
+              onClick={guardar}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+            >
+              {guardando ? "Guardando..." : "Sí, confirmar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <button onClick={onBack} style={{ padding: "6px 10px" }}>←</button>
-        <span style={{ fontSize: 15, fontWeight: 500 }}>Reparar unidad</span>
+        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
+        <span style={{ fontSize: 17, fontWeight: 600 }}>Reparar unidad</span>
       </div>
 
       <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>Calentador</label>
@@ -166,11 +204,10 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       {error && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 12 }}>{error}</p>}
 
       <button
-        onClick={guardar}
-        disabled={guardando}
-        style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 500, border: "0.5px solid #185fa5", color: "#185fa5" }}
+        onClick={validarYPedirConfirmacion}
+        style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 500, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
       >
-        {guardando ? "Guardando..." : "Guardar y volver al batch"}
+        Guardar y volver al batch
       </button>
     </div>
   );
