@@ -5,6 +5,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   const [items, setItems] = useState([]);
   const [unidades, setUnidades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [estadoActual, setEstadoActual] = useState(batch.estado);
 
   useEffect(() => {
     cargar();
@@ -26,6 +27,18 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     setItems(batchItems || []);
     setUnidades(unidadesData || []);
     setLoading(false);
+
+    const declarado = (batchItems || []).reduce((a, i) => a + i.cantidad_declarada, 0);
+    const completadas = (unidadesData || []).length;
+    const completo = declarado > 0 && completadas >= declarado;
+
+    if (completo && estadoActual !== "pendiente_revision" && estadoActual !== "cerrado") {
+      await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
+      setEstadoActual("pendiente_revision");
+    } else if (!completo && estadoActual === "recibido" && completadas > 0) {
+      await supabase.from("batches").update({ estado: "abierto" }).eq("id", batch.id);
+      setEstadoActual("abierto");
+    }
   }
 
   const progreso = items.map((it) => {
@@ -34,15 +47,36 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   });
 
   const modelosDisponibles = progreso.filter((p) => p.pendientes > 0);
-  const todoCompleto = modelosDisponibles.length === 0 && items.length > 0;
+
+  const estadoLabel = {
+    recibido: "Recibido",
+    abierto: "En proceso",
+    pendiente_revision: "Pendiente de revisión",
+    cerrado: "Cerrado",
+  };
+  const estadoBg = {
+    recibido: "#eef3fb",
+    abierto: "#eef3fb",
+    pendiente_revision: "#fdf3e3",
+    cerrado: "#eaf3de",
+  };
+  const estadoColor = {
+    recibido: "#185fa5",
+    abierto: "#185fa5",
+    pendiente_revision: "#8a5a10",
+    cerrado: "#3b6d11",
+  };
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <button onClick={onBack} style={{ padding: "6px 10px" }}>←</button>
-        <span style={{ fontSize: 15, fontWeight: 500, flex: 1 }}>Batch #{batch.numero_transferencia}</span>
-        <span style={{ fontSize: 11, color: "#185fa5", border: "0.5px solid #ddd", borderRadius: 8, padding: "2px 8px" }}>
-          {batch.estado === "cerrado" ? "Cerrado" : todoCompleto ? "Pendiente de revisión" : "En proceso"}
+        <button onClick={onBack} style={{ padding: "6px 10px", borderRadius: 8 }}>←</button>
+        <span style={{ fontSize: 17, fontWeight: 600, flex: 1 }}>#{batch.numero_transferencia}</span>
+        <span style={{
+          fontSize: 12, fontWeight: 500, color: estadoColor[estadoActual],
+          background: estadoBg[estadoActual], borderRadius: 20, padding: "4px 12px",
+        }}>
+          {estadoLabel[estadoActual]}
         </span>
       </div>
 
@@ -50,48 +84,9 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 500, marginBottom: 8 }}>PROGRESO</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
-            {progreso.map((p) => (
-              <div
-                key={p.modelo_codigo}
-                style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#f4f3ee", borderRadius: 8, fontSize: 13 }}
-              >
-                <span>{p.modelo_codigo}</span>
-                <span style={{ color: p.pendientes === 0 ? "#3b6d11" : "#185fa5", fontWeight: 500 }}>
-                  {p.completadas}/{p.cantidad_declarada}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {modelosDisponibles.length > 0 && (
-            <button
-              onClick={() => onRepararUnidad(batch, modelosDisponibles)}
-              style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 500, marginBottom: 18, border: "0.5px solid #185fa5", color: "#185fa5" }}
-            >
-              Reparar siguiente unidad
-            </button>
-          )}
-
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 500, marginBottom: 8 }}>HISTORIAL</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {unidades.length === 0 && <p style={{ fontSize: 12, color: "#999" }}>Sin unidades reparadas todavía.</p>}
-            {unidades.map((u) => (
-              <div key={u.id} style={{ padding: 10, background: "#fff", border: "0.5px solid #eee", borderRadius: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500 }}>
-                  <span>{u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}</span>
-                  <span style={{ color: "#666" }}>{u.decision}</span>
-                </div>
-                <p style={{ fontSize: 11, color: "#999", margin: "4px 0 0" }}>
-                  {(u.piezas_danadas || []).join(", ")}
-                  {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>PROGRESO</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+            {progreso.map((p) => {
+              const pct = Math.round((p.completadas / p.cantidad_declarada) * 100);
+              return (
+                <div
