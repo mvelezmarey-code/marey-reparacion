@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "./lib/supabase";
 import { useTecnicoActual } from "./lib/session";
 import SeleccionTecnico from "./screens/SeleccionTecnico";
 import Home from "./screens/Home";
@@ -27,20 +26,9 @@ export default function App() {
     return (
       <NuevoBatch
         onBack={() => setVista("home")}
-        onCreado={async (batch) => {
+        onCreado={(batch) => {
           setBatchActivo(batch);
-          try {
-            const { data: items, error } = await supabase
-              .from("batch_items")
-              .select("modelo_codigo, cantidad_declarada")
-              .eq("batch_id", batch.id);
-            if (error) throw error;
-            setModelosParaFormulario(items || []);
-          } catch (e) {
-            console.error("Error cargando batch_items:", e);
-            setModelosParaFormulario([]);
-          }
-          setVista("unidad");
+          setVista("batch");
         }}
       />
     );
