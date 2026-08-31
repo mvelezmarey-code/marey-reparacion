@@ -29,11 +29,17 @@ export default function App() {
         onBack={() => setVista("home")}
         onCreado={async (batch) => {
           setBatchActivo(batch);
-          const { data: items } = await supabase
-            .from("batch_items")
-            .select("modelo_codigo, cantidad_declarada")
-            .eq("batch_id", batch.id);
-          setModelosParaFormulario(items || []);
+          try {
+            const { data: items, error } = await supabase
+              .from("batch_items")
+              .select("modelo_codigo, cantidad_declarada")
+              .eq("batch_id", batch.id);
+            if (error) throw error;
+            setModelosParaFormulario(items || []);
+          } catch (e) {
+            console.error("Error cargando batch_items:", e);
+            setModelosParaFormulario([]);
+          }
           setVista("unidad");
         }}
       />
