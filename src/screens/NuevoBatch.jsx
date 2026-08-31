@@ -10,19 +10,41 @@ export default function NuevoBatch({ onBack, onCreado }) {
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
-  function agregarModelo() {
-    setItems([...items, { modelo: MODELOS[0], cantidad: 1 }]);
+  function modelosDisponiblesPara(indiceActual) {
+    const yaUsados = items.filter((_, i) => i !== indiceActual).map((it) => it.modelo);
+    return MODELOS.filter((m) => !yaUsados.includes(m));
   }
+
+  function agregarModelo() {
+    const usados = items.map((it) => it.modelo);
+    const siguienteLibre = MODELOS.find((m) => !usados.includes(m));
+    if (!siguienteLibre) {
+      setError("Ya agregaste todos los modelos disponibles.");
+      return;
+    }
+    setError("");
+    setItems([...items, { modelo: siguienteLibre, cantidad: 1 }]);
+  }
+
   function quitarModelo(i) {
     setItems(items.filter((_, idx) => idx !== i));
   }
+
   function actualizar(i, campo, valor) {
+    if (campo === "modelo") {
+      const yaUsado = items.some((it, idx) => idx !== i && it.modelo === valor);
+      if (yaUsado) {
+        setError("Ese modelo ya está agregado en este batch.");
+        return;
+      }
+      setError("");
+    }
     const copia = [...items];
     copia[i][campo] = valor;
     setItems(copia);
   }
 
-  function validarYPedirConfirmacion() {
+  async function validarYPedirConfirmacion() {
     if (!numero.trim()) {
       setError("Escribe el número de transferencia.");
       return;
@@ -31,6 +53,23 @@ export default function NuevoBatch({ onBack, onCreado }) {
       setError("Cada modelo necesita una cantidad válida.");
       return;
     }
+    const modelosUnicos = new Set(items.map((it) => it.modelo));
+    if (modelosUnicos.size !== items.length) {
+      setError("No puedes repetir el mismo modelo dos veces.");
+      return;
+    }
+
+    const { data: existente } = await supabase
+      .from("batches")
+      .select("id")
+      .eq("numero_transferencia", numero.trim())
+      .maybeSingle();
+
+    if (existente) {
+      setError("Ese número de transferencia ya existe. Usa uno distinto.");
+      return;
+    }
+
     setError("");
     setMostrarConfirmacion(true);
   }
@@ -45,7 +84,10 @@ export default function NuevoBatch({ onBack, onCreado }) {
       .single();
 
     if (errBatch) {
-      setError(errBatch.message);
+      const mensaje = errBatch.message.includes("unique")
+        ? "Ese número de transferencia ya existe. Usa uno distinto."
+        : errBatch.message;
+      setError(mensaje);
       setGuardando(false);
       setMostrarConfirmacion(false);
       return;
@@ -69,16 +111,23 @@ export default function NuevoBatch({ onBack, onCreado }) {
     onCreado(batch);
   }
 
+  const totalUnidades = items.reduce((a, it) => a + (Number(it.cantidad) || 0), 0);
+
   if (mostrarConfirmacion) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
         <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
           <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
           <div style={{ background: "#f4f3ee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
-            <p style={{ fontSize: 13, margin: "0 0 8px" }}><strong>Transferencia:</strong> {numero}</p>
+            <p style={{ fontSize: 13, margin: "0 0 10px" }}><strong>Transferencia:</strong> {numero}</p>
             {items.map((it, i) => (
               <p key={i} style={{ fontSize: 13, margin: "4px 0" }}>{it.modelo} · {it.cantidad} unidad(es)</p>
             ))}
+            <div style={{ borderTop: "0.5px solid #ddd", marginTop: 10, paddingTop: 10 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "#185fa5" }}>
+                Total: {totalUnidades} unidad{totalUnidades !== 1 ? "es" : ""}
+              </p>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button
@@ -124,7 +173,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
             onChange={(e) => actualizar(i, "modelo", e.target.value)}
             style={{ flex: 2, padding: 10, border: "0.5px solid #ddd", borderRadius: 10 }}
           >
-            {MODELOS.map((m) => (
+            {modelosDisponiblesPara(i).map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
