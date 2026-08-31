@@ -10,6 +10,7 @@ import Estadisticas from "./screens/Estadisticas";
 import BatchResumen from "./screens/BatchResumen";
 import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
+import Historial from "./screens/Historial";
 
 export default function App() {
   const { tecnico, esAdmin, setTecnico, listaTecnicos } = useTecnicoActual();
@@ -58,8 +59,24 @@ export default function App() {
     );
   }
 
+  if (vista === "historial") {
+    return (
+      <Historial
+        onBack={() => setVista(esAdmin ? "admin" : "home")}
+        onOpenBatch={(batch) => {
+          setBatchActivo(batch);
+          setVista("batch");
+        }}
+        onVerResumen={(batch) => {
+          setBatchActivo(batch);
+          setVista("resumen");
+        }}
+      />
+    );
+  }
+
   if (vista === "resumen" && batchActivo) {
-    return <BatchResumen batch={batchActivo} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
+    return <BatchResumen batch={batchActivo} onBack={() => setVista("historial")} />;
   }
 
   if (vista === "estadisticas") {
@@ -106,11 +123,8 @@ export default function App() {
         setBatchActivo(batch);
         setVista("batch");
       }}
-      onVerResumen={(batch) => {
-        setBatchActivo(batch);
-        setVista("resumen");
-      }}
       onNuevoBatch={() => setVista("nuevo_batch")}
+      onVerHistorial={() => setVista("historial")}
       onVerEstadisticas={() => setVista("estadisticas")}
       onSalir={() => setTecnico(null)}
     />
