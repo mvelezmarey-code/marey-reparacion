@@ -65,25 +65,25 @@ export default function NuevoBatch({ onBack, onCreado }) {
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <button onClick={onBack} style={{ padding: "6px 10px" }}>←</button>
-        <span style={{ fontSize: 15, fontWeight: 500 }}>Nueva transferencia</span>
+        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
+        <span style={{ fontSize: 17, fontWeight: 600 }}>Nueva transferencia</span>
       </div>
 
-      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>Número de transferencia</label>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Ingrese el número de transferencia.</p>
       <input
         value={numero}
         onChange={(e) => setNumero(e.target.value)}
         placeholder="TR-4900"
-        style={{ width: "100%", padding: 10, marginBottom: 16, border: "0.5px solid #ddd", borderRadius: 8 }}
+        style={{ width: "100%", padding: 12, marginBottom: 20, border: "0.5px solid #ddd", borderRadius: 10 }}
       />
 
-      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 6 }}>Composición del batch</label>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>Ingrese el número de productos que se van a reparar.</p>
       {items.map((it, i) => (
         <div key={i} style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <select
             value={it.modelo}
             onChange={(e) => actualizar(i, "modelo", e.target.value)}
-            style={{ flex: 2, padding: 8, border: "0.5px solid #ddd", borderRadius: 8 }}
+            style={{ flex: 2, padding: 10, border: "0.5px solid #ddd", borderRadius: 10 }}
           >
             {MODELOS.map((m) => (
               <option key={m} value={m}>{m}</option>
@@ -94,14 +94,14 @@ export default function NuevoBatch({ onBack, onCreado }) {
             min="1"
             value={it.cantidad}
             onChange={(e) => actualizar(i, "cantidad", e.target.value)}
-            style={{ flex: 1, padding: 8, border: "0.5px solid #ddd", borderRadius: 8 }}
+            style={{ flex: 1, padding: 10, border: "0.5px solid #ddd", borderRadius: 10 }}
           />
           {items.length > 1 && (
-            <button onClick={() => quitarModelo(i)} style={{ padding: "0 10px" }}>✕</button>
+            <button onClick={() => quitarModelo(i)} style={{ padding: "0 10px", borderRadius: 8 }}>✕</button>
           )}
         </div>
       ))}
-      <button onClick={agregarModelo} style={{ width: "100%", padding: 8, marginBottom: 16, fontSize: 13 }}>
+      <button onClick={agregarModelo} style={{ width: "100%", padding: 10, marginBottom: 20, fontSize: 13, borderRadius: 10 }}>
         + Agregar modelo
       </button>
 
@@ -110,7 +110,10 @@ export default function NuevoBatch({ onBack, onCreado }) {
       <button
         onClick={crear}
         disabled={guardando}
-        style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 500, border: "0.5px solid #185fa5", color: "#185fa5" }}
+        style={{
+          width: "100%", padding: 14, fontSize: 15, fontWeight: 600,
+          background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
+        }}
       >
         {guardando ? "Creando..." : "Confirmar recepción del batch"}
       </button>
