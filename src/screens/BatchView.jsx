@@ -70,8 +70,10 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <button onClick={onBack} style={{ padding: "6px 10px", borderRadius: 8 }}>←</button>
-        <span style={{ fontSize: 17, fontWeight: 600, flex: 1 }}>#{batch.numero_transferencia}</span>
+        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
+        <span style={{ fontSize: 17, fontWeight: 600, flex: 1 }}>Número de transferencia #{batch.numero_transferencia}</span>
+      </div>
+      <div style={{ marginBottom: 14 }}>
         <span style={{
           fontSize: 12, fontWeight: 500, color: estadoColor[estadoActual],
           background: estadoBg[estadoActual], borderRadius: 20, padding: "4px 12px",
@@ -84,7 +86,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>PROGRESO</p>
+          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>CANTIDAD PRODUCTO POR ARREGLAR</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
             {progreso.map((p) => {
               const pct = Math.round((p.completadas / p.cantidad_declarada) * 100);
@@ -112,11 +114,11 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
                 background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
               }}
             >
-              🔧 Reparar siguiente unidad
+              🔧 Comenzar reparación
             </button>
           )}
 
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>HISTORIAL</p>
+          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>HISTORIAL DE REPARACIÓN</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {unidades.length === 0 && <p style={{ fontSize: 12, color: "#999" }}>Sin unidades reparadas todavía.</p>}
             {unidades.map((u) => (
