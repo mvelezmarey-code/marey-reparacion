@@ -8,6 +8,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
   const [items, setItems] = useState([{ modelo: MODELOS[0], cantidad: 1 }]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   function agregarModelo() {
     setItems([...items, { modelo: MODELOS[0], cantidad: 1 }]);
@@ -21,7 +22,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
     setItems(copia);
   }
 
-  async function crear() {
+  function validarYPedirConfirmacion() {
     if (!numero.trim()) {
       setError("Escribe el número de transferencia.");
       return;
@@ -31,6 +32,10 @@ export default function NuevoBatch({ onBack, onCreado }) {
       return;
     }
     setError("");
+    setMostrarConfirmacion(true);
+  }
+
+  async function crear() {
     setGuardando(true);
 
     const { data: batch, error: errBatch } = await supabase
@@ -42,6 +47,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
     if (errBatch) {
       setError(errBatch.message);
       setGuardando(false);
+      setMostrarConfirmacion(false);
       return;
     }
 
@@ -55,11 +61,44 @@ export default function NuevoBatch({ onBack, onCreado }) {
     if (errItems) {
       setError(errItems.message);
       setGuardando(false);
+      setMostrarConfirmacion(false);
       return;
     }
 
     setGuardando(false);
     onCreado(batch);
+  }
+
+  if (mostrarConfirmacion) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+          <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
+          <div style={{ background: "#f4f3ee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
+            <p style={{ fontSize: 13, margin: "0 0 8px" }}><strong>Transferencia:</strong> {numero}</p>
+            {items.map((it, i) => (
+              <p key={i} style={{ fontSize: 13, margin: "4px 0" }}>{it.modelo} · {it.cantidad} unidad(es)</p>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => setMostrarConfirmacion(false)}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, border: "0.5px solid #ddd", borderRadius: 10, background: "#fff" }}
+            >
+              No, revisar
+            </button>
+            <button
+              onClick={crear}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+            >
+              {guardando ? "Guardando..." : "Sí, confirmar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -108,14 +147,13 @@ export default function NuevoBatch({ onBack, onCreado }) {
       {error && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 12 }}>{error}</p>}
 
       <button
-        onClick={crear}
-        disabled={guardando}
+        onClick={validarYPedirConfirmacion}
         style={{
           width: "100%", padding: 14, fontSize: 15, fontWeight: 600,
           background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
         }}
       >
-        {guardando ? "Creando..." : "Confirmar recepción del batch"}
+        Confirmar recepción del batch
       </button>
     </div>
   );
