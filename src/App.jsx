@@ -71,3 +71,32 @@ export default function App() {
         onBack={() => setVista("home")}
         onVerResumen={(batch) => {
           setBatchActivo(batch);
+          setVista("resumen");
+        }}
+      />
+    );
+  }
+
+  if (vista === "leaderboard") {
+    return <Leaderboard tecnico={tecnico} onBack={() => setVista("home")} />;
+  }
+
+  return (
+    <Home
+      tecnico={tecnico}
+      onOpenBatch={(batch) => {
+        setBatchActivo(batch);
+        setVista("batch");
+      }}
+      onVerResumen={(batch) => {
+        setBatchActivo(batch);
+        setVista("resumen");
+      }}
+      onNuevoBatch={() => setVista("nuevo_batch")}
+      onVerEstadisticas={() => setVista("estadisticas")}
+      onVerRevision={() => setVista("revision")}
+      onVerLeaderboard={() => setVista("leaderboard")}
+      onSalir={() => setTecnico(null)}
+    />
+  );
+}
