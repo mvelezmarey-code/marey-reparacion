@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTecnicoActual } from "./lib/session";
 import SeleccionTecnico from "./screens/SeleccionTecnico";
 import Home from "./screens/Home";
+import AdminHome from "./screens/AdminHome";
 import NuevoBatch from "./screens/NuevoBatch";
 import BatchView from "./screens/BatchView";
 import UnidadForm from "./screens/UnidadForm";
@@ -11,13 +12,13 @@ import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 
 export default function App() {
-  const { tecnico, setTecnico, TECNICOS } = useTecnicoActual();
+  const { tecnico, esAdmin, setTecnico, listaTecnicos } = useTecnicoActual();
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
 
   if (!tecnico) {
-    return <SeleccionTecnico TECNICOS={TECNICOS} onSelect={setTecnico} />;
+    return <SeleccionTecnico listaTecnicos={listaTecnicos} onSelect={setTecnico} />;
   }
 
   if (vista === "nuevo_batch") {
@@ -58,17 +59,17 @@ export default function App() {
   }
 
   if (vista === "resumen" && batchActivo) {
-    return <BatchResumen batch={batchActivo} onBack={() => setVista("home")} />;
+    return <BatchResumen batch={batchActivo} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
 
   if (vista === "estadisticas") {
-    return <Estadisticas onBack={() => setVista("home")} />;
+    return <Estadisticas onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
 
   if (vista === "revision") {
     return (
       <Revision
-        onBack={() => setVista("home")}
+        onBack={() => setVista("admin")}
         onVerResumen={(batch) => {
           setBatchActivo(batch);
           setVista("resumen");
@@ -78,7 +79,24 @@ export default function App() {
   }
 
   if (vista === "leaderboard") {
-    return <Leaderboard tecnico={tecnico} onBack={() => setVista("home")} />;
+    return <Leaderboard tecnico={tecnico} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
+  }
+
+  if (esAdmin && vista === "admin") {
+    return (
+      <AdminHome
+        tecnico={tecnico}
+        onVerRevision={() => setVista("revision")}
+        onVerEstadisticas={() => setVista("estadisticas")}
+        onVerLeaderboard={() => setVista("leaderboard")}
+        onSalir={() => setTecnico(null)}
+      />
+    );
+  }
+
+  if (esAdmin) {
+    setVista("admin");
+    return null;
   }
 
   return (
@@ -94,8 +112,6 @@ export default function App() {
       }}
       onNuevoBatch={() => setVista("nuevo_batch")}
       onVerEstadisticas={() => setVista("estadisticas")}
-      onVerRevision={() => setVista("revision")}
-      onVerLeaderboard={() => setVista("leaderboard")}
       onSalir={() => setTecnico(null)}
     />
   );
