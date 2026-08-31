@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export default function Historial({ onBack, onVerResumen, onOpenBatch }) {
+export default function Historial({ onBack, onVerResumen }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,38 +14,25 @@ export default function Historial({ onBack, onVerResumen, onOpenBatch }) {
     const { data } = await supabase
       .from("batches")
       .select("id, numero_transferencia, estado, created_at")
+      .in("estado", ["pendiente_revision", "cerrado"])
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
     setBatches(data || []);
     setLoading(false);
   }
 
   const estadoLabel = {
-    recibido: "Recibido",
-    abierto: "En proceso",
     pendiente_revision: "Pendiente de revisión",
     cerrado: "Cerrado",
   };
   const estadoBg = {
-    recibido: "#eef3fb",
-    abierto: "#eef3fb",
     pendiente_revision: "#fdf3e3",
     cerrado: "#eaf3de",
   };
   const estadoColor = {
-    recibido: "#185fa5",
-    abierto: "#185fa5",
     pendiente_revision: "#8a5a10",
     cerrado: "#3b6d11",
   };
-
-  function abrir(b) {
-    if (b.estado === "cerrado" || b.estado === "pendiente_revision") {
-      onVerResumen(b);
-    } else {
-      onOpenBatch(b);
-    }
-  }
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
@@ -57,13 +44,13 @@ export default function Historial({ onBack, onVerResumen, onOpenBatch }) {
       {loading ? (
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : batches.length === 0 ? (
-        <p style={{ fontSize: 13, color: "#999" }}>Sin batches todavía.</p>
+        <p style={{ fontSize: 13, color: "#999" }}>Todavía no hay batches terminados.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {batches.map((b) => (
             <div
               key={b.id}
-              onClick={() => abrir(b)}
+              onClick={() => onVerResumen(b)}
               style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "14px 16px", background: "#fff", borderRadius: 12,
