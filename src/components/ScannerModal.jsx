@@ -1,66 +1,77 @@
-import { useEffect, useRef } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-
-const FORMATOS_BARRAS = [
-  Html5QrcodeSupportedFormats.CODE_128,
-  Html5QrcodeSupportedFormats.CODE_39,
-  Html5QrcodeSupportedFormats.CODE_93,
-  Html5QrcodeSupportedFormats.EAN_13,
-  Html5QrcodeSupportedFormats.EAN_8,
-  Html5QrcodeSupportedFormats.UPC_A,
-  Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.ITF,
-  Html5QrcodeSupportedFormats.QR_CODE,
-];
+import { useEffect, useRef, useState } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 
 export default function ScannerModal({ onScan, onClose }) {
-  const scannerRef = useRef(null);
-  const startedRef = useRef(false);
+  const videoRef = useRef(null);
+  const controlsRef = useRef(null);
+  const [errorCam, setErrorCam] = useState(false);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    const reader = new BrowserMultiFormatReader();
+    let activo = true;
 
-    const scanner = new Html5Qrcode("scanner-region", {
-      formatsToSupport: FORMATOS_BARRAS,
-      verbose: false,
-    });
-    scannerRef.current = scanner;
-
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 280, height: 120 } },
-        (decodedText) => {
-          onScan(decodedText);
-          scanner.stop().catch(() => {});
-        },
-        () => {}
+    reader
+      .decodeFromConstraints(
+        { video: { facingMode: "environment" } },
+        videoRef.current,
+        (result, err, controls) => {
+          controlsRef.current = controls;
+          if (result && activo) {
+            activo = false;
+            onScan(result.getText());
+            controls.stop();
+          }
+        }
       )
       .catch(() => {
-        onClose();
+        setErrorCam(true);
       });
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+      activo = false;
+      if (controlsRef.current) {
+        controlsRef.current.stop();
       }
     };
   }, []);
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 2000,
     }}>
-      <p style={{ color: "#fff", fontSize: 14, marginBottom: 16 }}>Apunta la cámara al código de barras</p>
-      <div id="scanner-region" style={{ width: 300, borderRadius: 16, overflow: "hidden" }} />
-      <button
-        onClick={onClose}
-        style={{ marginTop: 20, padding: "12px 28px", background: "#fff", borderRadius: 10, fontSize: 14, fontWeight: 600, border: "none" }}
-      >
-        Cancelar
-      </button>
+      <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta la cámara al código de barras</p>
+      <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Mantén el código recto, a 15-20cm</p>
+
+      {errorCam ? (
+        <div style={{ textAlign: "center", padding: 20 }}>
+          <p style={{ color: "#fff", fontSize: 14, marginBottom: 16 }}>No se pudo acceder a la cámara.</p>
+          <button onClick={onClose} style={{ padding: "12px 28px", background: "#fff", borderRadius: 10, fontSize: 14, fontWeight: 600, border: "none" }}>
+            Cerrar
+          </button>
+        </div>
+      ) : (
+        <>
+          <div style={{ width: 320, height: 220, borderRadius: 16, overflow: "hidden", position: "relative", background: "#000" }}>
+            <video
+              ref={videoRef}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              muted
+              playsInline
+            />
+            <div style={{
+              position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+              width: "85%", height: 70, border: "2px solid #4ade80", borderRadius: 8,
+            }} />
+          </div>
+          <button
+            onClick={onClose}
+            style={{ marginTop: 20, padding: "12px 28px", background: "#fff", borderRadius: 10, fontSize: 14, fontWeight: 600, border: "none" }}
+          >
+            Cancelar
+          </button>
+        </>
+      )}
     </div>
   );
 }
