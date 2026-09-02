@@ -32,25 +32,47 @@ export default function ScannerModal({ onScan, onClose }) {
     };
   }, []);
 
+  function preprocesar(canvas) {
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    // Escala de grises + contraste alto (blanco/negro puro) para ayudar al OCR
+    for (let i = 0; i < data.length; i += 4) {
+      const gris = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+      const valor = gris > 140 ? 255 : 0;
+      data[i] = valor;
+      data[i + 1] = valor;
+      data[i + 2] = valor;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
   async function capturarYLeer() {
     if (!videoRef.current || !canvasRef.current) return;
     setProcesando(true);
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const anchoRecorte = video.videoWidth * 0.85;
-    const altoRecorte = video.videoHeight * 0.25;
+
+    // Recorte más angosto (solo la franja del número) y escalado 2x para más resolución
+    const escala = 2;
+    const anchoRecorte = video.videoWidth * 0.8;
+    const altoRecorte = video.videoHeight * 0.18;
     const x = (video.videoWidth - anchoRecorte) / 2;
     const y = (video.videoHeight - altoRecorte) / 2;
 
-    canvas.width = anchoRecorte;
-    canvas.height = altoRecorte;
+    canvas.width = anchoRecorte * escala;
+    canvas.height = altoRecorte * escala;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, x, y, anchoRecorte, altoRecorte, 0, 0, anchoRecorte, altoRecorte);
+    ctx.drawImage(video, x, y, anchoRecorte, altoRecorte, 0, 0, canvas.width, canvas.height);
+
+    preprocesar(canvas);
 
     try {
       const resultado = await Tesseract.recognize(canvas, "eng", {
         tessedit_char_whitelist: "0123456789",
+        tessedit_pageseg_mode: "7", // trata la imagen como una sola línea de texto
       });
       const soloDigitos = resultado.data.text.replace(/\D/g, "");
       setTextoDetectado(soloDigitos || "");
@@ -99,8 +121,8 @@ export default function ScannerModal({ onScan, onClose }) {
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 2000,
     }}>
-      <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta al número impreso</p>
-      <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Encuadra los dígitos dentro del marco</p>
+      <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta solo al número</p>
+      <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Encuadra únicamente los dígitos, sin las líneas del código</p>
 
       {errorCam ? (
         <div style={{ textAlign: "center", padding: 20 }}>
@@ -115,7 +137,7 @@ export default function ScannerModal({ onScan, onClose }) {
             <video ref={videoRef} style={{ width: "100%", height: "100%", objectFit: "cover" }} muted playsInline autoPlay />
             <div style={{
               position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-              width: "85%", height: "25%", border: "2px solid #4ade80", borderRadius: 8,
+              width: "80%", height: "18%", border: "2px solid #4ade80", borderRadius: 8,
             }} />
           </div>
           <canvas ref={canvasRef} style={{ display: "none" }} />
