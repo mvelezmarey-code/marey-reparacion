@@ -25,6 +25,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
+      <div style={{ textAlign: "center", fontSize: 10, color: "#ccc", marginBottom: 8 }}>BUILD v6-31ago-2145</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <span style={{ fontSize: 14, color: "#666" }}>Hola, {tecnico}</span>
         <button onClick={onSalir} style={{ fontSize: 11, padding: "5px 10px", background: "transparent", border: "0.5px solid #ddd", borderRadius: 8 }}>
