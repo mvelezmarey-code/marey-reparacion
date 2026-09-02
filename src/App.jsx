@@ -63,10 +63,6 @@ export default function App() {
     return (
       <Historial
         onBack={() => setVista(esAdmin ? "admin" : "home")}
-        onOpenBatch={(batch) => {
-          setBatchActivo(batch);
-          setVista("batch");
-        }}
         onVerResumen={(batch) => {
           setBatchActivo(batch);
           setVista("resumen");
