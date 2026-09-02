@@ -58,7 +58,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
               border: batchesActivos.length > 0 ? "none" : "1px solid #ddd",
             }}>2</div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 13, color: "#666", fontWeight: 600 }}>Producto por arreglar</p>
+              <p style={{ margin: "0 0 8px", fontSize: 13, color: "#666", fontWeight: 600 }}>Reparación en Progreso</p>
               {batchesActivos.length === 0 ? (
                 <div style={{ padding: 16, background: "#fff", borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
                   <p style={{ margin: 0, fontSize: 13, color: "#999" }}>No tienes batches activos.</p>
@@ -74,9 +74,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#185fa5" }}>
                         Transferencia #{b.numero_transferencia}
                       </p>
-                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "#185fa5" }}>
-                        {b.estado === "recibido" ? "Recibido, sin empezar" : "En proceso"}
-                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "#185fa5" }}>En proceso</p>
                     </button>
                   ))}
                 </div>
