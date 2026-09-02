@@ -6,6 +6,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   const [unidades, setUnidades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [estadoActual, setEstadoActual] = useState(batch.estado);
+  const [mostrarCompletado, setMostrarCompletado] = useState(false);
 
   useEffect(() => {
     cargar();
@@ -35,6 +36,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     if (completo && estadoActual !== "pendiente_revision" && estadoActual !== "cerrado") {
       await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
       setEstadoActual("pendiente_revision");
+      setMostrarCompletado(true);
     } else if (!completo && estadoActual === "recibido" && completadas > 0) {
       await supabase.from("batches").update({ estado: "abierto" }).eq("id", batch.id);
       setEstadoActual("abierto");
@@ -66,6 +68,26 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     pendiente_revision: "#8a5a10",
     cerrado: "#3b6d11",
   };
+
+  if (mostrarCompletado) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+        <div style={{ background: "#fff", borderRadius: 18, padding: "28px 24px", textAlign: "center", maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+          <div style={{ fontSize: 52, color: "#3b6d11" }}>✓</div>
+          <p style={{ fontSize: 17, fontWeight: 600, margin: "14px 0 6px" }}>¡Batch completado!</p>
+          <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px" }}>
+            Reparaste todas las unidades de la transferencia #{batch.numero_transferencia}. Queda pendiente de revisión por el supervisor.
+          </p>
+          <button
+            onClick={onBack}
+            style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+          >
+            OK, volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
