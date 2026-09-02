@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Tesseract from "tesseract.js";
 
+const LARGO_SERIAL = 11;
+
 export default function ScannerModal({ onScan, onClose }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -36,8 +38,6 @@ export default function ScannerModal({ onScan, onClose }) {
     const ctx = canvas.getContext("2d");
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imgData.data;
-
-    // Escala de grises + contraste alto (blanco/negro puro) para ayudar al OCR
     for (let i = 0; i < data.length; i += 4) {
       const gris = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
       const valor = gris > 140 ? 255 : 0;
@@ -54,8 +54,6 @@ export default function ScannerModal({ onScan, onClose }) {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-
-    // Recorte más angosto (solo la franja del número) y escalado 2x para más resolución
     const escala = 2;
     const anchoRecorte = video.videoWidth * 0.8;
     const altoRecorte = video.videoHeight * 0.18;
@@ -72,9 +70,9 @@ export default function ScannerModal({ onScan, onClose }) {
     try {
       const resultado = await Tesseract.recognize(canvas, "eng", {
         tessedit_char_whitelist: "0123456789",
-        tessedit_pageseg_mode: "7", // trata la imagen como una sola línea de texto
+        tessedit_pageseg_mode: "7",
       });
-      const soloDigitos = resultado.data.text.replace(/\D/g, "");
+      const soloDigitos = resultado.data.text.replace(/\D/g, "").slice(0, LARGO_SERIAL);
       setTextoDetectado(soloDigitos || "");
     } catch (e) {
       setTextoDetectado("");
@@ -83,6 +81,7 @@ export default function ScannerModal({ onScan, onClose }) {
   }
 
   if (textoDetectado !== null) {
+    const completo = textoDetectado.length === LARGO_SERIAL;
     return (
       <div style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
@@ -93,10 +92,14 @@ export default function ScannerModal({ onScan, onClose }) {
         </p>
         <input
           value={textoDetectado}
-          onChange={(e) => setTextoDetectado(e.target.value.replace(/\D/g, ""))}
+          onChange={(e) => setTextoDetectado(e.target.value.replace(/\D/g, "").slice(0, LARGO_SERIAL))}
           autoFocus
-          style={{ width: 260, padding: 14, fontSize: 18, textAlign: "center", borderRadius: 10, border: "none", marginBottom: 20 }}
+          maxLength={LARGO_SERIAL}
+          style={{ width: 260, padding: 14, fontSize: 18, textAlign: "center", borderRadius: 10, border: "none", marginBottom: 8 }}
         />
+        <p style={{ fontSize: 12, color: completo ? "#4ade80" : "#f59e0b", marginBottom: 20 }}>
+          {textoDetectado.length}/{LARGO_SERIAL} dígitos {completo ? "✓" : ""}
+        </p>
         <div style={{ display: "flex", gap: 10, width: 260 }}>
           <button
             onClick={() => setTextoDetectado(null)}
@@ -106,8 +109,8 @@ export default function ScannerModal({ onScan, onClose }) {
           </button>
           <button
             onClick={() => onScan(textoDetectado)}
-            disabled={!textoDetectado}
-            style={{ flex: 1, padding: 12, background: textoDetectado ? "#0f3d63" : "#555", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600 }}
+            disabled={!completo}
+            style={{ flex: 1, padding: 12, background: completo ? "#0f3d63" : "#555", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600 }}
           >
             Usar número
           </button>
@@ -122,7 +125,7 @@ export default function ScannerModal({ onScan, onClose }) {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 2000,
     }}>
       <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta solo al número</p>
-      <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Encuadra únicamente los dígitos, sin las líneas del código</p>
+      <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Son {LARGO_SERIAL} dígitos, sin las líneas del código</p>
 
       {errorCam ? (
         <div style={{ textAlign: "center", padding: 20 }}>
