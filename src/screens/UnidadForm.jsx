@@ -112,4 +112,103 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             <p style={{ fontSize: 13, margin: "0 0 6px" }}><strong>Decisión:</strong> {decision}</p>
             {requiereNewSn && <p style={{ fontSize: 13, margin: 0 }}><strong>New SN:</strong> {newSn}</p>}
           </div>
-          <div style={{ display: "flex", gap:
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => setMostrarConfirmacion(false)}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, border: "0.5px solid #ddd", borderRadius: 10, background: "#fff" }}
+            >
+              No, revisar
+            </button>
+            <button
+              onClick={guardar}
+              disabled={guardando}
+              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+            >
+              {guardando ? "Guardando..." : "Sí, confirmar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
+        <span style={{ fontSize: 17, fontWeight: 600 }}>Reparar unidad</span>
+      </div>
+
+      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>Calentador</label>
+      <select value={modelo} onChange={(e) => setModelo(e.target.value)} style={{ width: "100%", padding: 10, marginBottom: 4, border: "0.5px solid #ddd", borderRadius: 8 }}>
+        {modelosDisponibles.map((m) => (
+          <option key={m.modelo_codigo} value={m.modelo_codigo}>{m.modelo_codigo}</option>
+        ))}
+      </select>
+      <p style={{ fontSize: 11, color: "#999", margin: "0 0 14px" }}>Solo modelos pendientes de este batch</p>
+
+      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>Old SN</label>
+      <input
+        value={oldSn}
+        onChange={(e) => setOldSn(e.target.value)}
+        disabled={oldSnNa}
+        placeholder="Escanear o escribir"
+        style={{ width: "100%", padding: 10, marginBottom: 6, border: "0.5px solid #ddd", borderRadius: 8 }}
+      />
+      <label style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+        <input type="checkbox" checked={oldSnNa} onChange={(e) => { setOldSnNa(e.target.checked); setOldSn(""); }} />
+        No tiene número de serie
+      </label>
+
+      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 6 }}>Piezas dañadas</label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+        {catalogoPiezas.map((p) => (
+          <button
+            key={p.nombre}
+            onClick={() => togglePieza(p.nombre, p.es_ninguna)}
+            style={{
+              fontSize: 12,
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: piezas.includes(p.nombre) ? "1px solid #185fa5" : "0.5px solid #ddd",
+              background: piezas.includes(p.nombre) ? "#eef3fb" : "#fff",
+              color: piezas.includes(p.nombre) ? "#185fa5" : "#333",
+            }}
+          >
+            {p.nombre}
+          </button>
+        ))}
+      </div>
+
+      <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>Decisión</label>
+      <select value={decision} onChange={(e) => setDecision(e.target.value)} style={{ width: "100%", padding: 10, marginBottom: 16, border: "0.5px solid #ddd", borderRadius: 8 }}>
+        <option value="">Selecciona...</option>
+        {catalogoDecisiones.map((d) => (
+          <option key={d.decision} value={d.decision}>{d.decision}</option>
+        ))}
+      </select>
+
+      {requiereNewSn && (
+        <>
+          <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 4 }}>New SN *</label>
+          <input
+            value={newSn}
+            onChange={(e) => setNewSn(e.target.value)}
+            placeholder="Escanear nuevo SN"
+            style={{ width: "100%", padding: 10, marginBottom: 16, border: "0.5px solid #ddd", borderRadius: 8 }}
+          />
+        </>
+      )}
+
+      {error && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 12 }}>{error}</p>}
+
+      <button
+        onClick={validarYPedirConfirmacion}
+        style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 500, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+      >
+        Guardar y volver al batch
+      </button>
+    </div>
+  );
+}
