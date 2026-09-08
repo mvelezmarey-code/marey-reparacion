@@ -105,36 +105,54 @@ export default function NuevoBatch({ onBack, onCreado }) {
 
   const totalUnidades = items.reduce((a, it) => a + (Number(it.cantidad) || 0), 0);
 
+  const shellStyle = {
+    height: "100vh",
+    maxWidth: 420,
+    margin: "0 auto",
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    background: "#f5f4f1",
+  };
+
+  const inputStyle = {
+    width: "100%", padding: 13, border: "1px solid #e4e2da", borderRadius: 12,
+    boxSizing: "border-box", fontSize: 14, background: "#fff",
+  };
+
+  const botonPrimario = {
+    width: "100%", padding: 16, fontSize: 15, fontWeight: 700,
+    background: "#0f3d63", color: "#fff", border: "none", borderRadius: 14,
+  };
+
   if (mostrarConfirmacion) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-        <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
-          <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
-          <div style={{ background: "#f4f3ee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
-            <p style={{ fontSize: 13, margin: "0 0 10px" }}><strong>Transferencia:</strong> {numero}</p>
+        <div style={{ background: "#fff", borderRadius: 20, padding: 24, maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+          <p style={{ fontSize: 17, fontWeight: 700, margin: "0 0 16px" }}>¿Confirmas esta información?</p>
+          <div style={{ background: "#f5f4f1", borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            <p style={{ fontSize: 13, margin: "0 0 10px", color: "#666" }}><strong style={{ color: "#222" }}>Transferencia:</strong> {numero}</p>
             {items.map((it, i) => (
-              <p key={i} style={{ fontSize: 13, margin: "4px 0" }}>{it.modelo} · {it.cantidad} unidad(es)</p>
+              <p key={i} style={{ fontSize: 13, margin: "4px 0", color: "#666" }}>{it.modelo} · {it.cantidad} unidad(es)</p>
             ))}
-            <div style={{ borderTop: "0.5px solid #ddd", marginTop: 10, paddingTop: 10 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "#185fa5" }}>
+            <div style={{ borderTop: "1px solid #e4e2da", marginTop: 10, paddingTop: 10 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "#0f3d63" }}>
                 Total: {totalUnidades} unidad{totalUnidades !== 1 ? "es" : ""}
               </p>
             </div>
           </div>
+          {error && <p style={{ fontSize: 13, color: "#a32d2d", marginBottom: 16 }}>{error}</p>}
           <div style={{ display: "flex", gap: 10 }}>
             <button
               onClick={() => setMostrarConfirmacion(false)}
               disabled={guardando}
-              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, border: "0.5px solid #ddd", borderRadius: 10, background: "#fff" }}
+              style={{ flex: 1, padding: 13, fontSize: 14, fontWeight: 700, border: "1px solid #e4e2da", borderRadius: 12, background: "#fff", color: "#333" }}
             >
-              No, revisar
+              Revisar
             </button>
-            <button
-              onClick={crear}
-              disabled={guardando}
-              style={{ flex: 1, padding: 12, fontSize: 14, fontWeight: 600, background: guardando ? "#8bb3d9" : "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
-            >
-              {guardando ? "Guardando..." : "Sí, confirmar"}
+            <button onClick={crear} disabled={guardando} style={{ ...botonPrimario, flex: 1, padding: 13 }}>
+              {guardando ? "Guardando..." : "Confirmar"}
             </button>
           </div>
         </div>
@@ -143,61 +161,57 @@ export default function NuevoBatch({ onBack, onCreado }) {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
-        <span style={{ fontSize: 17, fontWeight: 600 }}>Nueva transferencia</span>
+    <div style={shellStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>←</button>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "#222" }}>Nueva transferencia</span>
       </div>
 
-      <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Ingrese el número de transferencia.</p>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>Ingrese el número de transferencia</p>
       <input
         value={numero}
         onChange={(e) => setNumero(e.target.value)}
         placeholder="TR-4900"
-        style={{ width: "100%", padding: 12, marginBottom: 20, border: "0.5px solid #ddd", borderRadius: 10 }}
+        style={{ ...inputStyle, marginBottom: 24 }}
       />
 
-      <p style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>Ingrese el número de productos que se van a reparar.</p>
-      {items.map((it, i) => (
-        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          <select
-            value={it.modelo}
-            onChange={(e) => actualizar(i, "modelo", e.target.value)}
-            style={{ flex: 2, padding: 10, border: "0.5px solid #ddd", borderRadius: 10 }}
-          >
-            {modelosDisponiblesPara(i).map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min="1"
-            value={it.cantidad}
-            onChange={(e) => actualizar(i, "cantidad", e.target.value)}
-            style={{ flex: 1, padding: 10, border: "0.5px solid #ddd", borderRadius: 10 }}
-          />
-          {items.length > 1 && (
-            <button onClick={() => quitarModelo(i)} style={{ padding: "0 10px", borderRadius: 8 }}>✕</button>
-          )}
-        </div>
-      ))}
-      <button onClick={agregarModelo} style={{ width: "100%", padding: 10, marginBottom: 20, fontSize: 13, borderRadius: 10 }}>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>Ingrese el número de productos que se van a reparar</p>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, marginBottom: 12 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <select
+              value={it.modelo}
+              onChange={(e) => actualizar(i, "modelo", e.target.value)}
+              style={{ ...inputStyle, flex: 2 }}
+            >
+              {modelosDisponiblesPara(i).map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="1"
+              value={it.cantidad}
+              onChange={(e) => actualizar(i, "cantidad", e.target.value)}
+              style={{ ...inputStyle, flex: 1 }}
+            />
+            {items.length > 1 && (
+              <button onClick={() => quitarModelo(i)} style={{ padding: "0 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff", color: "#999" }}>✕</button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button onClick={agregarModelo} style={{ width: "100%", padding: 12, marginBottom: 20, fontSize: 13, fontWeight: 600, borderRadius: 12, border: "1px solid #e4e2da", background: "#fff", color: "#333" }}>
         + Agregar modelo
       </button>
 
       {error && (
-        <p style={{ fontSize: 13, color: "#a32d2d", background: "#fbeaea", padding: "10px 12px", borderRadius: 8, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: "#a32d2d", background: "#fbeaea", padding: "10px 12px", borderRadius: 10, marginBottom: 16 }}>
           {error}
         </p>
       )}
 
-      <button
-        onClick={validarYPedirConfirmacion}
-        style={{
-          width: "100%", padding: 14, fontSize: 15, fontWeight: 600,
-          background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
-        }}
-      >
+      <button onClick={validarYPedirConfirmacion} style={botonPrimario}>
         Confirmar recepción del batch
       </button>
     </div>
