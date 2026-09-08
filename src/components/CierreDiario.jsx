@@ -23,13 +23,20 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
     setError("");
   }
 
+  function nombreSeguro(texto) {
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // quita acentos
+      .replace(/[^a-zA-Z0-9]/g, "_"); // reemplaza cualquier caracter raro por guion bajo
+  }
+
   async function confirmar() {
     if (!foto) return;
     setSubiendo(true);
     setError("");
 
     const hoy = new Date().toISOString().split("T")[0];
-    const nombreArchivo = `${tecnico.replace(/\s+/g, "_")}_${hoy}_${Date.now()}.jpg`;
+    const nombreArchivo = `${nombreSeguro(tecnico)}_${hoy}_${Date.now()}.jpg`;
 
     const { error: errUpload } = await supabase.storage
       .from("cierres-diarios")
