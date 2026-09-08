@@ -12,6 +12,7 @@ import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
 import Reparaciones from "./screens/Reparaciones";
+import PiezasReporte from "./screens/PiezasReporte";
 
 export default function App() {
   const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
@@ -84,6 +85,10 @@ export default function App() {
     return <Reparaciones tecnico={tecnico} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
 
+  if (vista === "piezas" && esAdmin) {
+    return <PiezasReporte onBack={() => setVista("admin")} />;
+  }
+
   if (vista === "revision") {
     return (
       <Revision
@@ -108,6 +113,7 @@ export default function App() {
         onVerEstadisticas={() => setVista("estadisticas")}
         onVerLeaderboard={() => setVista("leaderboard")}
         onVerReparaciones={() => setVista("reparaciones")}
+        onVerPiezas={() => setVista("piezas")}
         onSalir={() => setTecnico(null)}
       />
     );
