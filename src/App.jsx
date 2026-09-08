@@ -11,6 +11,7 @@ import BatchResumen from "./screens/BatchResumen";
 import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
+import Reparaciones from "./screens/Reparaciones";
 
 export default function App() {
   const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
@@ -79,6 +80,10 @@ export default function App() {
     return <Estadisticas onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
 
+  if (vista === "reparaciones") {
+    return <Reparaciones tecnico={tecnico} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
+  }
+
   if (vista === "revision") {
     return (
       <Revision
@@ -102,6 +107,7 @@ export default function App() {
         onVerRevision={() => setVista("revision")}
         onVerEstadisticas={() => setVista("estadisticas")}
         onVerLeaderboard={() => setVista("leaderboard")}
+        onVerReparaciones={() => setVista("reparaciones")}
         onSalir={() => setTecnico(null)}
       />
     );
@@ -122,6 +128,7 @@ export default function App() {
       onNuevoBatch={() => setVista("nuevo_batch")}
       onVerHistorial={() => setVista("historial")}
       onVerEstadisticas={() => setVista("estadisticas")}
+      onVerReparaciones={() => setVista("reparaciones")}
       onSalir={() => setTecnico(null)}
     />
   );
