@@ -23,12 +23,38 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
   const batchesActivos = batches.filter((b) => b.estado === "abierto" || b.estado === "recibido");
   const historialCount = batches.filter((b) => b.estado === "pendiente_revision" || b.estado === "cerrado").length;
 
+  const shellStyle = {
+    height: "100vh",
+    maxWidth: 420,
+    margin: "0 auto",
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    background: "#f5f4f1",
+  };
+
+  const numeroCirculo = (activo) => ({
+    width: 32, height: 32, borderRadius: "50%",
+    background: activo ? "#0f3d63" : "#e4e2da",
+    color: activo ? "#fff" : "#999",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 14, fontWeight: 700, flexShrink: 0,
+  });
+
+  const tarjeta = {
+    flex: 1, textAlign: "left", padding: 16, background: "#fff",
+    borderRadius: 16, border: "none", boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  };
+
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
-      <div style={{ textAlign: "center", fontSize: 10, color: "#ccc", marginBottom: 8 }}>BUILD v6-31ago-2145</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <span style={{ fontSize: 14, color: "#666" }}>Hola, {tecnico}</span>
-        <button onClick={onSalir} style={{ fontSize: 11, padding: "5px 10px", background: "transparent", border: "0.5px solid #ddd", borderRadius: 8 }}>
+    <div style={shellStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "#222" }}>{tecnico}</span>
+        <button
+          onClick={onSalir}
+          style={{ fontSize: 12, fontWeight: 600, padding: "8px 14px", background: "#fff", border: "1px solid #e4e2da", borderRadius: 10, color: "#666" }}
+        >
           Cambiar
         </button>
       </div>
@@ -36,46 +62,40 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
       {loading ? (
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
-        <>
-          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%", background: "#185fa5", color: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0,
-            }}>1</div>
-            <button
-              onClick={onNuevoBatch}
-              style={{ flex: 1, textAlign: "left", padding: 16, background: "#fff", borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "none" }}
-            >
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Registra una nueva transferencia</p>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#666" }}>Recibir mercancía para reparar</p>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={numeroCirculo(true)}>1</div>
+            <button onClick={onNuevoBatch} style={tarjeta}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#222" }}>Registra una nueva transferencia</p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Recibir mercancía para reparar</p>
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: batchesActivos.length > 0 ? "#185fa5" : "#fff", color: batchesActivos.length > 0 ? "#fff" : "#999",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0,
-              border: batchesActivos.length > 0 ? "none" : "1px solid #ddd",
-            }}>2</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 13, color: "#666", fontWeight: 600 }}>Reparación en Progreso</p>
+          <div style={{ display: "flex", gap: 12, flex: 1, minHeight: 0 }}>
+            <div style={numeroCirculo(batchesActivos.length > 0)}>2</div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#999", letterSpacing: 0.3, textTransform: "uppercase" }}>
+                Reparación en Progreso
+              </p>
               {batchesActivos.length === 0 ? (
-                <div style={{ padding: 16, background: "#fff", borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#999" }}>No tienes batches activos.</p>
+                <div style={{ ...tarjeta, flex: "none" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "#999" }}>No tienes batches activos</p>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
                   {batchesActivos.map((b) => (
                     <button
                       key={b.id}
                       onClick={() => onOpenBatch(b)}
-                      style={{ textAlign: "left", padding: 14, background: "#eef3fb", border: "2px solid #185fa5", borderRadius: 14 }}
+                      style={{
+                        textAlign: "left", padding: 14, background: "#eaf0f7",
+                        border: "1.5px solid #0f3d63", borderRadius: 14, flexShrink: 0,
+                      }}
                     >
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#185fa5" }}>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f3d63" }}>
                         Transferencia #{b.numero_transferencia}
                       </p>
-                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "#185fa5" }}>En proceso</p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "#0f3d63" }}>En proceso</p>
                     </button>
                   ))}
                 </div>
@@ -83,33 +103,26 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%", background: "#fff", color: "#999",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0,
-              border: "1px solid #ddd",
-            }}>3</div>
-            <button
-              onClick={onVerHistorial}
-              style={{ flex: 1, textAlign: "left", padding: 16, background: "#fff", borderRadius: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "none" }}
-            >
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={numeroCirculo(historialCount > 0)}>3</div>
+            <button onClick={onVerHistorial} style={tarjeta}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Historial de producto arreglado</p>
-                <span style={{ fontSize: 11, color: "#666", background: "#f4f3ee", borderRadius: 20, padding: "3px 10px" }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#222" }}>Historial de producto arreglado</p>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#666", background: "#f5f4f1", borderRadius: 20, padding: "3px 10px" }}>
                   {historialCount}
                 </span>
               </div>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#666" }}>Batches completados y en revisión</p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Batches completados y en revisión</p>
             </button>
           </div>
 
           <button
             onClick={onVerEstadisticas}
-            style={{ width: "100%", padding: 12, fontSize: 13, background: "#fff", border: "0.5px solid #ddd", borderRadius: 12 }}
+            style={{ width: "100%", padding: 14, fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid #e4e2da", borderRadius: 14, color: "#333" }}
           >
-            📊 Ver estadísticas completas
+            Ver estadísticas completas
           </button>
-        </>
+        </div>
       )}
     </div>
   );
