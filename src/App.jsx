@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { supabase } from "./lib/supabase";
+import { useState } from "react";
 import { useTecnicoActual } from "./lib/session";
 import SeleccionTecnico from "./screens/SeleccionTecnico";
 import Home from "./screens/Home";
@@ -12,73 +11,17 @@ import BatchResumen from "./screens/BatchResumen";
 import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
-import CierreDiario from "./components/CierreDiario";
-
-const FORZAR_CIERRE_PARA_PRUEBA = true;
-
-function esDespuesDe330pm() {
-  if (FORZAR_CIERRE_PARA_PRUEBA) return true;
-  const ahora = new Date();
-  return ahora.getHours() > 15 || (ahora.getHours() === 15 && ahora.getMinutes() >= 30);
-}
 
 export default function App() {
   const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
-  const [verificandoCierre, setVerificandoCierre] = useState(true);
-  const [necesitaCierre, setNecesitaCierre] = useState(false);
 
-  useEffect(() => {
-    if (!tecnico) return;
-    if (esAdmin) {
-      setVerificandoCierre(false);
-      return;
-    }
-    verificarCierre();
-  }, [tecnico, esAdmin]);
-
-  async function verificarCierre() {
-    setVerificandoCierre(true);
-    if (!esDespuesDe330pm()) {
-      setNecesitaCierre(false);
-      setVerificandoCierre(false);
-      return;
-    }
-    const hoy = new Date().toISOString().split("T")[0];
-    const { data } = await supabase
-      .from("cierres_diarios")
-      .select("id")
-      .eq("tecnico_nombre", tecnico)
-      .eq("fecha", hoy)
-      .maybeSingle();
-
-    setNecesitaCierre(!data);
-    setVerificandoCierre(false);
-  }
-
-  // PASO 1: sin técnico identificado, siempre pedir PIN primero
   if (!tecnico) {
     return <SeleccionTecnico onSelect={setTecnico} />;
   }
 
-  // PASO 2: ya hay técnico, pero todavía estamos chequeando si necesita cierre
-  if (verificandoCierre) {
-    return null;
-  }
-
-  // PASO 3: ya hay técnico Y ya sabemos que necesita hacer el cierre
-  if (necesitaCierre) {
-    return (
-      <CierreDiario
-        tecnico={tecnico}
-        onDesbloqueado={() => setNecesitaCierre(false)}
-      />
-    );
-  }
-
-  // A partir de aquí, el resto de la app normal
   if (vista === "nuevo_batch") {
     return (
       <NuevoBatch
