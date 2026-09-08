@@ -241,3 +241,56 @@ export default function Reparaciones({ tecnico, onBack }) {
                 </button>
                 {abierto && (
                   <div style={{ padding: "8px 10px 4px", display: "flex", flexDirection: "column", gap: 4 }}>
+                    {horasDe(f.nombre).map((h, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", fontSize: 12 }}>
+                        <span style={{ color: "#999", fontWeight: 600 }}>{h.hora}</span>
+                        <span style={{ color: "#666" }}>{h.modelo}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", minWidth: columnas.length > 5 ? 480 : 320 }}>
+            <thead>
+              <tr style={{ background: "#f5f4f1" }}>
+                <td style={{ padding: "7px 10px", fontWeight: 700, color: "#666" }}>Técnico</td>
+                {columnas.map((c) => (
+                  <td key={c} style={{ padding: "7px 8px", textAlign: "center", color: "#666" }}>{c}</td>
+                ))}
+                <td style={{ padding: "7px 10px", textAlign: "center", fontWeight: 700, color: "#666" }}>Total</td>
+              </tr>
+            </thead>
+            <tbody>
+              {tablaData.map((f) => {
+                const esTu = f.nombre === tecnico;
+                return (
+                  <tr key={f.nombre} style={{ borderTop: "1px solid #f0efec", background: esTu ? "#fdf0dc" : "transparent" }}>
+                    <td style={{ padding: "7px 10px", fontWeight: 600, color: esTu ? "#93650f" : "#0f3d63" }}>
+                      {f.nombre}{esTu ? " (tú)" : ""}
+                    </td>
+                    {f.valores.map((v, i) => (
+                      <td key={i} style={{ textAlign: "center", color: esTu ? "#93650f" : "#222" }}>{v}</td>
+                    ))}
+                    <td style={{ textAlign: "center", fontWeight: 700, color: esTu ? "#93650f" : "#0f3d63" }}>{f.total}</td>
+                  </tr>
+                );
+              })}
+              <tr style={{ borderTop: "1px solid #f0efec", background: "#eaf0f7", fontWeight: 700 }}>
+                <td style={{ padding: "7px 10px", color: "#0f3d63" }}>Total</td>
+                {totalesPorColumna.map((t, i) => (
+                  <td key={i} style={{ textAlign: "center", color: "#0f3d63" }}>{t}</td>
+                ))}
+                <td style={{ textAlign: "center", color: "#0f3d63" }}>{totalEquipo}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
