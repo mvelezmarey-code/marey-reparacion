@@ -35,14 +35,39 @@ export default function Reparaciones({ tecnico, onBack }) {
   const [anioMensual, setAnioMensual] = useState(new Date().getFullYear());
   const [anioHistorico, setAnioHistorico] = useState(new Date().getFullYear());
   const [unidades, setUnidades] = useState([]);
+  const [volumenAnual, setVolumenAnual] = useState([]);
+  const [decisionesAnual, setDecisionesAnual] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState(null);
+  const [tecnicoDecision, setTecnicoDecision] = useState(null);
 
   useEffect(() => {
-    cargar();
+    if (pestana === "historico") {
+      cargarHistorico();
+    } else {
+      cargarUnidades();
+    }
   }, [pestana, fechaDia, semanaBase, mes, anioMensual, anioHistorico]);
 
-  async function cargar() {
+  async function cargarHistorico() {
+    setLoading(true);
+    const { data: volumen } = await supabase
+      .from("monthly_repair_volume")
+      .select("*")
+      .eq("year", anioHistorico)
+      .order("month_num", { ascending: true });
+
+    const { data: decisiones } = await supabase
+      .from("repair_decision_breakdown")
+      .select("*")
+      .eq("year", anioHistorico);
+
+    setVolumenAnual(volumen || []);
+    setDecisionesAnual(decisiones || []);
+    setLoading(false);
+  }
+
+  async function cargarUnidades() {
     setLoading(true);
     let desde, hasta;
 
@@ -54,14 +79,11 @@ export default function Reparaciones({ tecnico, onBack }) {
       fin.setDate(fin.getDate() + 6);
       desde = formatoFecha(semanaBase);
       hasta = formatoFecha(fin);
-    } else if (pestana === "mensual") {
+    } else {
       const inicio = new Date(anioMensual, mes, 1);
       const fin = new Date(anioMensual, mes + 1, 0);
       desde = formatoFecha(inicio);
       hasta = formatoFecha(fin);
-    } else {
-      desde = `${anioHistorico}-01-01`;
-      hasta = `${anioHistorico}-12-31`;
     }
 
     const { data } = await supabase
@@ -85,7 +107,6 @@ export default function Reparaciones({ tecnico, onBack }) {
       const semanas = Math.ceil((fin.getDate() + inicio.getDay()) / 7);
       return Array.from({ length: semanas }, (_, i) => `Sem ${i + 1}`);
     }
-    if (pestana === "historico") return MESES_CORTOS;
     return ["Hoy"];
   }
 
@@ -98,9 +119,6 @@ export default function Reparaciones({ tecnico, onBack }) {
     if (pestana === "mensual") {
       const inicioMes = new Date(anioMensual, mes, 1);
       return Math.floor((fecha.getDate() + inicioMes.getDay() - 1) / 7);
-    }
-    if (pestana === "historico") {
-      return fecha.getMonth();
     }
     return 0;
   }
@@ -130,6 +148,26 @@ export default function Reparaciones({ tecnico, onBack }) {
       }));
   }
 
+  // Datos para la pestaña Histórico (desde las tablas nuevas)
+  const tecnicosHistorico = [...new Set(volumenAnual.map((v) => v.technician))];
+  const tablaHistorico = tecnicosHistorico.map((nombre) => {
+    const valores = MESES_CORTOS.map((_, i) => {
+      const fila = volumenAnual.find((v) => v.technician === nombre && v.month_num === i + 1);
+      return fila ? fila.units : 0;
+    });
+    return { nombre, valores, total: valores.reduce((a, b) => a + b, 0) };
+  }).sort((a, b) => b.total - a.total);
+
+  const totalHistoricoPorMes = MESES_CORTOS.map((_, i) => tablaHistorico.reduce((a, f) => a + f.valores[i], 0));
+  const totalHistoricoAnual = tablaHistorico.reduce((a, f) => a + f.total, 0);
+  const tuAporteHistorico = tablaHistorico.find((f) => f.nombre === tecnico)?.total || 0;
+
+  function decisionesDe(nombre) {
+    return decisionesAnual
+      .filter((d) => d.technician === nombre && Number(d.pct) > 0)
+      .sort((a, b) => Number(b.pct) - Number(a.pct));
+  }
+
   function exportar() {
     if (pestana === "diario") {
       const filas = [["Técnico", "Hora", "Modelo"]];
@@ -137,6 +175,11 @@ export default function Reparaciones({ tecnico, onBack }) {
         horasDe(f.nombre).forEach((h) => filas.push([f.nombre, h.hora, h.modelo]));
       });
       descargarCSV(`reparaciones_diario_${formatoFecha(fechaDia)}.csv`, filas);
+    } else if (pestana === "historico") {
+      const filas = [["Técnico", ...MESES_CORTOS, "Total"]];
+      tablaHistorico.forEach((f) => filas.push([f.nombre, ...f.valores, f.total]));
+      filas.push(["Total", ...totalHistoricoPorMes, totalHistoricoAnual]);
+      descargarCSV(`reparaciones_historico_${anioHistorico}.csv`, filas);
     } else {
       const filas = [["Técnico", ...columnas, "Total"]];
       tablaData.forEach((f) => filas.push([f.nombre, ...f.valores, f.total]));
@@ -200,20 +243,35 @@ export default function Reparaciones({ tecnico, onBack }) {
 
       {pestana === "historico" && (
         <select value={anioHistorico} onChange={(e) => setAnioHistorico(Number(e.target.value))} style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e4e2da", background: "#fff", marginBottom: 14 }}>
-          {[2024, 2025, 2026].map((a) => <option key={a} value={a}>{a}</option>)}
+          {[2025, 2026].map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
       )}
 
-      <div style={{ background: "#eaf0f7", borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Total del equipo</p>
-          <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{totalEquipo}</p>
+      {pestana !== "historico" && (
+        <div style={{ background: "#eaf0f7", borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Total del equipo</p>
+            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{totalEquipo}</p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Tu aporte</p>
+            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{tuAporte}</p>
+          </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Tu aporte</p>
-          <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{tuAporte}</p>
+      )}
+
+      {pestana === "historico" && (
+        <div style={{ background: "#eaf0f7", borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Total del equipo {anioHistorico}</p>
+            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{totalHistoricoAnual}</p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Tu aporte</p>
+            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{tuAporteHistorico}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {loading ? (
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
@@ -253,6 +311,67 @@ export default function Reparaciones({ tecnico, onBack }) {
             );
           })}
         </div>
+      ) : pestana === "historico" ? (
+        <>
+          <div style={{ overflowX: "auto", marginBottom: 16 }}>
+            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", minWidth: 480 }}>
+              <thead>
+                <tr style={{ background: "#f5f4f1" }}>
+                  <td style={{ padding: "6px 10px", fontWeight: 700, color: "#666" }}>Técnico</td>
+                  {MESES_CORTOS.map((c) => (
+                    <td key={c} style={{ padding: "6px 6px", textAlign: "center", color: "#666" }}>{c}</td>
+                  ))}
+                  <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#666" }}>Total</td>
+                </tr>
+              </thead>
+              <tbody>
+                {tablaHistorico.map((f) => {
+                  const esTu = f.nombre === tecnico;
+                  const abierto = tecnicoDecision === f.nombre;
+                  return (
+                    <>
+                      <tr
+                        key={f.nombre}
+                        onClick={() => setTecnicoDecision(abierto ? null : f.nombre)}
+                        style={{ borderTop: "1px solid #f0efec", background: esTu ? "#fdf0dc" : "transparent", cursor: "pointer" }}
+                      >
+                        <td style={{ padding: "7px 10px", fontWeight: 600, color: esTu ? "#93650f" : "#0f3d63" }}>
+                          {f.nombre}{esTu ? " (tú)" : ""}
+                        </td>
+                        {f.valores.map((v, i) => (
+                          <td key={i} style={{ textAlign: "center", color: esTu ? "#93650f" : "#222" }}>{v}</td>
+                        ))}
+                        <td style={{ textAlign: "center", fontWeight: 700, color: esTu ? "#93650f" : "#0f3d63" }}>{f.total}</td>
+                      </tr>
+                      {abierto && (
+                        <tr>
+                          <td colSpan={MESES_CORTOS.length + 2} style={{ padding: "8px 14px 12px", background: "#f9f8f5" }}>
+                            <p style={{ fontSize: 11, color: "#999", fontWeight: 700, margin: "0 0 6px" }}>DECISIONES {anioHistorico}</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {decisionesDe(f.nombre).map((d) => (
+                                <span key={d.decision} style={{ fontSize: 11, padding: "4px 8px", background: "#fff", borderRadius: 8 }}>
+                                  {d.decision} · {Number(d.pct)}%
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
+                <tr style={{ borderTop: "1px solid #f0efec", background: "#eaf0f7", fontWeight: 700 }}>
+                  <td style={{ padding: "7px 10px", color: "#0f3d63" }}>Total</td>
+                  {totalHistoricoPorMes.map((t, i) => (
+                    <td key={i} style={{ textAlign: "center", color: "#0f3d63" }}>{t}</td>
+                  ))}
+                  <td style={{ textAlign: "center", color: "#0f3d63" }}>{totalHistoricoAnual}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style={{ fontSize: 11, color: "#999", textAlign: "center" }}>Toca un técnico para ver su desglose de decisiones</p>
+        </>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", minWidth: columnas.length > 5 ? 480 : 320 }}>
