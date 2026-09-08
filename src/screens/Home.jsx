@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onSalir }) {
+export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onVerReparaciones, onSalir }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -108,22 +108,3 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
             <button onClick={onVerHistorial} style={tarjeta}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#222" }}>Historial de producto arreglado</p>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#666", background: "#f5f4f1", borderRadius: 20, padding: "3px 10px" }}>
-                  {historialCount}
-                </span>
-              </div>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Batches completados y en revisión</p>
-            </button>
-          </div>
-
-          <button
-            onClick={onVerEstadisticas}
-            style={{ width: "100%", padding: 14, fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid #e4e2da", borderRadius: 14, color: "#333" }}
-          >
-            Ver estadísticas completas
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
