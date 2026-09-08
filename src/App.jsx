@@ -14,8 +14,6 @@ import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
 import CierreDiario from "./components/CierreDiario";
 
-// MODO DE PRUEBA: cambia a true para forzar el bloqueo sin esperar a las 3:30pm reales.
-// Recuerda volver a false (o quitar esta línea) antes de usar en producción real.
 const FORZAR_CIERRE_PARA_PRUEBA = true;
 
 function esDespuesDe330pm() {
@@ -33,7 +31,8 @@ export default function App() {
   const [necesitaCierre, setNecesitaCierre] = useState(false);
 
   useEffect(() => {
-    if (!tecnico || esAdmin) {
+    if (!tecnico) return;
+    if (esAdmin) {
       setVerificandoCierre(false);
       return;
     }
@@ -59,14 +58,17 @@ export default function App() {
     setVerificandoCierre(false);
   }
 
+  // PASO 1: sin técnico identificado, siempre pedir PIN primero
   if (!tecnico) {
     return <SeleccionTecnico onSelect={setTecnico} />;
   }
 
+  // PASO 2: ya hay técnico, pero todavía estamos chequeando si necesita cierre
   if (verificandoCierre) {
     return null;
   }
 
+  // PASO 3: ya hay técnico Y ya sabemos que necesita hacer el cierre
   if (necesitaCierre) {
     return (
       <CierreDiario
@@ -76,6 +78,7 @@ export default function App() {
     );
   }
 
+  // A partir de aquí, el resto de la app normal
   if (vista === "nuevo_batch") {
     return (
       <NuevoBatch
