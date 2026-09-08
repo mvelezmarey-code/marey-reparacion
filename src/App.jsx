@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 import { useTecnicoActual } from "./lib/session";
 import SeleccionTecnico from "./screens/SeleccionTecnico";
 import Home from "./screens/Home";
@@ -11,15 +12,63 @@ import BatchResumen from "./screens/BatchResumen";
 import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
+import CierreDiario from "./components/CierreDiario";
+
+function esDespuesDe330pm() {
+  const ahora = new Date();
+  return ahora.getHours() > 15 || (ahora.getHours() === 15 && ahora.getMinutes() >= 30);
+}
 
 export default function App() {
   const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
+  const [verificandoCierre, setVerificandoCierre] = useState(true);
+  const [necesitaCierre, setNecesitaCierre] = useState(false);
+
+  useEffect(() => {
+    if (!tecnico || esAdmin) {
+      setVerificandoCierre(false);
+      return;
+    }
+    verificarCierre();
+  }, [tecnico, esAdmin]);
+
+  async function verificarCierre() {
+    setVerificandoCierre(true);
+    if (!esDespuesDe330pm()) {
+      setNecesitaCierre(false);
+      setVerificandoCierre(false);
+      return;
+    }
+    const hoy = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
+      .from("cierres_diarios")
+      .select("id")
+      .eq("tecnico_nombre", tecnico)
+      .eq("fecha", hoy)
+      .maybeSingle();
+
+    setNecesitaCierre(!data);
+    setVerificandoCierre(false);
+  }
 
   if (!tecnico) {
     return <SeleccionTecnico onSelect={setTecnico} />;
+  }
+
+  if (verificandoCierre) {
+    return null;
+  }
+
+  if (necesitaCierre) {
+    return (
+      <CierreDiario
+        tecnico={tecnico}
+        onDesbloqueado={() => setNecesitaCierre(false)}
+      />
+    );
   }
 
   if (vista === "nuevo_batch") {
