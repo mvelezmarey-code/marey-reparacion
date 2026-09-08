@@ -26,8 +26,8 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
   function nombreSeguro(texto) {
     return texto
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // quita acentos
-      .replace(/[^a-zA-Z0-9]/g, "_"); // reemplaza cualquier caracter raro por guion bajo
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "_");
   }
 
   async function confirmar() {
@@ -43,7 +43,7 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
       .upload(nombreArchivo, foto);
 
     if (errUpload) {
-      setError("No se pudo subir la foto. Intenta de nuevo.");
+      setError("Error al subir foto: " + errUpload.message);
       setSubiendo(false);
       return;
     }
@@ -59,7 +59,7 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
     setSubiendo(false);
 
     if (errInsert) {
-      setError("No se pudo registrar el cierre. Intenta de nuevo.");
+      setError("Error al guardar: " + errInsert.message);
       return;
     }
 
@@ -87,7 +87,7 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
         <img src={previewUrl} alt="preview" style={{ width: 220, borderRadius: 14, marginBottom: 20 }} />
       )}
 
-      {error && <p style={{ fontSize: 13, color: "#a32d2d", marginBottom: 16 }}>{error}</p>}
+      {error && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 16, textAlign: "center", padding: "0 10px" }}>{error}</p>}
 
       {!foto ? (
         <button
