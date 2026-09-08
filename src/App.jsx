@@ -13,13 +13,13 @@ import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
 
 export default function App() {
-  const { tecnico, esAdmin, setTecnico, listaTecnicos } = useTecnicoActual();
+  const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
 
   if (!tecnico) {
-    return <SeleccionTecnico listaTecnicos={listaTecnicos} onSelect={setTecnico} />;
+    return <SeleccionTecnico onSelect={setTecnico} />;
   }
 
   if (vista === "nuevo_batch") {
