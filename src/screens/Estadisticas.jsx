@@ -3,11 +3,13 @@ import { supabase } from "../lib/supabase";
 
 const MODELOS = ["PP110", "PP220", "ECO070", "ECO085", "ECO110", "GA5FLP", "GA6FLP", "GA10FLP", "GA16FLP"];
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const DECISIONES_QUE_REEMPLAZAN = ["Refurbished", "Nuevo", "PPKIT", "ECO-KIT", "ECO-KIT110", "Tripa"];
+const DECISIONES_QUE_DESCARTAN = ["Descartar", "Dummy"];
 
 export default function Estadisticas({ onBack }) {
   const [modelo, setModelo] = useState(MODELOS[0]);
   const [anio, setAnio] = useState(2026);
-  const [piezas, setPiezas] = useState([]);
+  const [unidades, setUnidades] = useState([]);
   const [decisiones, setDecisiones] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,27 +19,49 @@ export default function Estadisticas({ onBack }) {
 
   async function cargar() {
     setLoading(true);
-    const { data: p } = await supabase
-      .from("v_piezas_por_mes")
-      .select("*")
+    const { data: unidadesData } = await supabase
+      .from("unidades")
+      .select("piezas_danadas, decision, created_at")
       .eq("modelo_codigo", modelo)
-      .eq("anio", anio);
-    const { data: d } = await supabase
+      .gte("created_at", `${anio}-01-01`)
+      .lte("created_at", `${anio}-12-31`);
+
+    const { data: decisionesData } = await supabase
       .from("v_decisiones_por_mes")
       .select("*")
       .eq("modelo_codigo", modelo)
       .eq("anio", anio);
-    setPiezas(p || []);
-    setDecisiones(d || []);
+
+    setUnidades(unidadesData || []);
+    setDecisiones(decisionesData || []);
     setLoading(false);
   }
 
-  function pivotear(rows, campoNombre) {
-    const nombres = [...new Set(rows.map((r) => r[campoNombre]))];
+  function pivotearPiezas(filtroDecisiones) {
+    const filtradas = unidades.filter((u) => filtroDecisiones.includes(u.decision));
+    const nombresUnicos = new Set();
+    filtradas.forEach((u) => (u.piezas_danadas || []).forEach((p) => nombresUnicos.add(p)));
+
+    return [...nombresUnicos].map((nombre) => {
+      const porMes = Array(12).fill(0);
+      let total = 0;
+      filtradas.forEach((u) => {
+        if ((u.piezas_danadas || []).includes(nombre)) {
+          const mes = new Date(u.created_at).getMonth();
+          porMes[mes]++;
+          total++;
+        }
+      });
+      return { nombre, porMes, total };
+    });
+  }
+
+  function pivotearDecisiones(rows) {
+    const nombres = [...new Set(rows.map((r) => r.decision))];
     return nombres.map((nombre) => {
       const porMes = Array(12).fill(0);
       let total = 0;
-      rows.filter((r) => r[campoNombre] === nombre).forEach((r) => {
+      rows.filter((r) => r.decision === nombre).forEach((r) => {
         porMes[r.mes - 1] = r.cantidad;
         total += r.cantidad;
       });
@@ -45,17 +69,25 @@ export default function Estadisticas({ onBack }) {
     });
   }
 
-  const filasPiezas = pivotear(piezas, "pieza");
-  const filasDecisiones = pivotear(decisiones, "decision");
-  const totalesPorMesPiezas = Array(12).fill(0);
-  filasPiezas.forEach((f) => f.porMes.forEach((v, i) => (totalesPorMesPiezas[i] += v)));
-  const totalesPorMesDecisiones = Array(12).fill(0);
-  filasDecisiones.forEach((f) => f.porMes.forEach((v, i) => (totalesPorMesDecisiones[i] += v)));
+  const filasReemplazadas = pivotearPiezas(DECISIONES_QUE_REEMPLAZAN);
+  const filasDescartadas = pivotearPiezas(DECISIONES_QUE_DESCARTAN);
+  const filasDecisiones = pivotearDecisiones(decisiones);
 
-  function Tabla({ titulo, filas, totalesPorMes }) {
+  function totalesPorMes(filas) {
+    const totales = Array(12).fill(0);
+    filas.forEach((f) => f.porMes.forEach((v, i) => (totales[i] += v)));
+    return totales;
+  }
+
+  const totalesReemplazadas = totalesPorMes(filasReemplazadas);
+  const totalesDescartadas = totalesPorMes(filasDescartadas);
+  const totalesDecisiones = totalesPorMes(filasDecisiones);
+
+  function Tabla({ titulo, nota, notaColor, filas, totalesPorMes: totales }) {
     return (
       <>
-        <p style={{ fontSize: 11, color: "#999", fontWeight: 500, margin: "16px 0 6px" }}>{titulo}</p>
+        <p style={{ fontSize: 11, color: "#999", fontWeight: 600, margin: "16px 0 2px" }}>{titulo}</p>
+        {nota && <p style={{ fontSize: 11, color: notaColor, margin: "0 0 6px" }}>{nota}</p>}
         <div style={{ overflowX: "auto" }}>
           <table style={{ fontSize: 10, borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
             <thead>
@@ -68,6 +100,9 @@ export default function Estadisticas({ onBack }) {
               </tr>
             </thead>
             <tbody>
+              {filas.length === 0 && (
+                <tr><td colSpan={14} style={{ padding: "8px 6px", color: "#999" }}>Sin registros</td></tr>
+              )}
               {filas.map((f) => (
                 <tr key={f.nombre} style={{ borderTop: "0.5px solid #eee" }}>
                   <td style={{ padding: "4px 6px", color: "#185fa5" }}>{f.nombre}</td>
@@ -79,11 +114,11 @@ export default function Estadisticas({ onBack }) {
               ))}
               <tr style={{ borderTop: "0.5px solid #eee", background: "#f4f3ee", fontWeight: 500 }}>
                 <td style={{ padding: "4px 6px" }}>Total</td>
-                {totalesPorMes.map((v, i) => (
+                {totales.map((v, i) => (
                   <td key={i} style={{ padding: "4px 6px", textAlign: "center" }}>{v}</td>
                 ))}
                 <td style={{ padding: "4px 6px", textAlign: "center" }}>
-                  {totalesPorMes.reduce((a, b) => a + b, 0)}
+                  {totales.reduce((a, b) => a + b, 0)}
                 </td>
               </tr>
             </tbody>
@@ -113,8 +148,25 @@ export default function Estadisticas({ onBack }) {
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
-          <Tabla titulo="PIEZAS DAÑADAS POR MES" filas={filasPiezas} totalesPorMes={totalesPorMesPiezas} />
-          <Tabla titulo="DECISIONES POR MES" filas={filasDecisiones} totalesPorMes={totalesPorMesDecisiones} />
+          <Tabla
+            titulo="PIEZAS REEMPLAZADAS POR MES"
+            nota="Estas sí consumen inventario"
+            notaColor="#3b6d11"
+            filas={filasReemplazadas}
+            totalesPorMes={totalesReemplazadas}
+          />
+          <Tabla
+            titulo="PIEZAS ENCONTRADAS EN UNIDADES DESCARTADAS"
+            nota="Solo diagnóstico · no representa consumo de inventario"
+            notaColor="#854f0b"
+            filas={filasDescartadas}
+            totalesPorMes={totalesDescartadas}
+          />
+          <Tabla
+            titulo="DECISIONES POR MES"
+            filas={filasDecisiones}
+            totalesPorMes={totalesDecisiones}
+          />
         </>
       )}
     </div>
