@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const DECISIONES_QUE_REEMPLAZAN = ["Refurbished", "Nuevo", "PPKIT", "ECO-KIT", "ECO-KIT110", "Tripa"];
+const DECISIONES_QUE_DESCARTAN = ["Descartar", "Dummy"];
+
 function agrupar(arr, campo) {
   const conteo = {};
   arr.forEach((u) => {
@@ -13,11 +16,12 @@ function agrupar(arr, campo) {
   return Object.entries(conteo).map(([nombre, cantidad]) => ({ nombre, cantidad }));
 }
 
-function TablaPivot({ titulo, columnaLabel, filas }) {
+function TablaPivot({ titulo, columnaLabel, filas, notaColor }) {
   const total = filas.reduce((a, f) => a + f.cantidad, 0);
   return (
     <>
-      <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 8px" }}>{titulo}</p>
+      <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 4px" }}>{titulo}</p>
+      {notaColor && <p style={{ fontSize: 11, color: notaColor, margin: "0 0 8px" }}>No representa consumo de inventario</p>}
       <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden" }}>
         <thead>
           <tr style={{ background: "#f5f4f1" }}>
@@ -26,6 +30,9 @@ function TablaPivot({ titulo, columnaLabel, filas }) {
           </tr>
         </thead>
         <tbody>
+          {filas.length === 0 && (
+            <tr><td colSpan={2} style={{ padding: "10px 12px", color: "#999" }}>Sin registros</td></tr>
+          )}
           {filas.map((f) => (
             <tr key={f.nombre} style={{ borderTop: "1px solid #f0efec" }}>
               <td style={{ padding: "8px 12px", color: "#222" }}>{f.nombre}</td>
@@ -64,12 +71,22 @@ export default function BatchResumen({ batch, onBack }) {
   const porModelo = agrupar(unidades, "modelo_codigo");
   const porDecision = agrupar(unidades, "decision");
 
+  const unidadesReemplazadas = unidades.filter((u) => DECISIONES_QUE_REEMPLAZAN.includes(u.decision));
+  const unidadesDescartadas = unidades.filter((u) => DECISIONES_QUE_DESCARTAN.includes(u.decision));
+
   const modelosUnicos = [...new Set(unidades.map((u) => u.modelo_codigo))];
-  const piezasPorModelo = modelosUnicos.map((modelo) => {
-    const unidadesDeEsteModelo = unidades.filter((u) => u.modelo_codigo === modelo);
+
+  const piezasReemplazadasPorModelo = modelosUnicos.map((modelo) => {
+    const unidadesDeEsteModelo = unidadesReemplazadas.filter((u) => u.modelo_codigo === modelo);
     const piezas = agrupar(unidadesDeEsteModelo, "piezas_danadas");
     return { modelo, piezas };
-  });
+  }).filter((m) => m.piezas.length > 0);
+
+  const piezasDescartadasPorModelo = modelosUnicos.map((modelo) => {
+    const unidadesDeEsteModelo = unidadesDescartadas.filter((u) => u.modelo_codigo === modelo);
+    const piezas = agrupar(unidadesDeEsteModelo, "piezas_danadas");
+    return { modelo, piezas };
+  }).filter((m) => m.piezas.length > 0);
 
   const porTecnico = Object.entries(
     unidades.reduce((acc, u) => {
@@ -104,16 +121,39 @@ export default function BatchResumen({ batch, onBack }) {
         <>
           <TablaPivot titulo="Calentadores por modelo" columnaLabel="Modelo" filas={porModelo} />
 
-          <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 10px" }}>
-            Piezas dañadas por modelo
+          <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 2px" }}>
+            Piezas reemplazadas por modelo
           </p>
-          {piezasPorModelo.map(({ modelo, piezas }) => (
+          <p style={{ fontSize: 11, color: "#2f5c17", margin: "0 0 10px" }}>Estas sí consumen inventario</p>
+          {piezasReemplazadasPorModelo.length === 0 && (
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 10 }}>Sin unidades reparadas todavía en este batch.</p>
+          )}
+          {piezasReemplazadasPorModelo.map(({ modelo, piezas }) => (
             <div key={modelo} style={{ background: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: "#0f3d63", margin: "0 0 8px" }}>{modelo}</p>
               {piezas.map((p) => (
                 <div key={p.nombre} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "6px 0", borderTop: "1px solid #f0efec" }}>
                   <span style={{ color: "#222" }}>{p.nombre}</span>
                   <span style={{ color: "#666" }}>{p.cantidad}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+
+          <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 2px" }}>
+            Piezas encontradas en unidades descartadas
+          </p>
+          <p style={{ fontSize: 11, color: "#93650f", margin: "0 0 10px" }}>Solo diagnóstico · no representa consumo de inventario</p>
+          {piezasDescartadasPorModelo.length === 0 && (
+            <p style={{ fontSize: 12, color: "#999", marginBottom: 10 }}>Sin unidades descartadas en este batch.</p>
+          )}
+          {piezasDescartadasPorModelo.map(({ modelo, piezas }) => (
+            <div key={modelo} style={{ background: "#fdf7ec", borderRadius: 12, padding: 14, marginBottom: 10 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#93650f", margin: "0 0 8px" }}>{modelo}</p>
+              {piezas.map((p) => (
+                <div key={p.nombre} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "6px 0", borderTop: "1px solid #f0e6d0" }}>
+                  <span style={{ color: "#7a5209" }}>{p.nombre}</span>
+                  <span style={{ color: "#93650f" }}>{p.cantidad}</span>
                 </div>
               ))}
             </div>
