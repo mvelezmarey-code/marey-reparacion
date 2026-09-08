@@ -54,32 +54,45 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     cerrado: "Cerrado",
   };
   const estadoBg = {
-    recibido: "#eef3fb",
-    abierto: "#eef3fb",
-    pendiente_revision: "#fdf3e3",
-    cerrado: "#eaf3de",
+    recibido: "#eaf0f7",
+    abierto: "#eaf0f7",
+    pendiente_revision: "#fdf0dc",
+    cerrado: "#e6f0dd",
   };
   const estadoColor = {
-    recibido: "#185fa5",
-    abierto: "#185fa5",
-    pendiente_revision: "#8a5a10",
-    cerrado: "#3b6d11",
+    recibido: "#0f3d63",
+    abierto: "#0f3d63",
+    pendiente_revision: "#93650f",
+    cerrado: "#2f5c17",
+  };
+
+  const shellStyle = {
+    height: "100vh",
+    maxWidth: 420,
+    margin: "0 auto",
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
+    background: "#f5f4f1",
   };
 
   if (mostrarCompletado) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-        <div style={{ background: "#fff", borderRadius: 18, padding: "28px 24px", textAlign: "center", maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
-          <div style={{ fontSize: 52, color: "#3b6d11" }}>✓</div>
-          <p style={{ fontSize: 17, fontWeight: 600, margin: "14px 0 6px" }}>¡Batch completado!</p>
-          <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px" }}>
+        <div style={{ background: "#fff", borderRadius: 20, padding: "32px 28px", textAlign: "center", maxWidth: 320, margin: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#e6f0dd", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+            <div style={{ fontSize: 28, color: "#2f5c17", fontWeight: 700 }}>✓</div>
+          </div>
+          <p style={{ fontSize: 18, fontWeight: 700, margin: "18px 0 8px" }}>Batch completado</p>
+          <p style={{ fontSize: 13, color: "#666", margin: "0 0 24px", lineHeight: 1.5 }}>
             Reparaste todas las unidades de la transferencia #{batch.numero_transferencia}. Queda pendiente de revisión por el supervisor.
           </p>
           <button
             onClick={onBack}
-            style={{ width: "100%", padding: 12, fontSize: 14, fontWeight: 600, background: "#185fa5", color: "#fff", border: "none", borderRadius: 10 }}
+            style={{ width: "100%", padding: 14, fontSize: 14, fontWeight: 700, background: "#0f3d63", color: "#fff", border: "none", borderRadius: 12 }}
           >
-            OK, volver al inicio
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -87,15 +100,13 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <button onClick={onBack} style={{ padding: "8px 12px", borderRadius: 8 }}>←</button>
-        <span style={{ fontSize: 17, fontWeight: 600, flex: 1 }}>Número de transferencia #{batch.numero_transferencia}</span>
-      </div>
-      <div style={{ marginBottom: 14 }}>
+    <div style={shellStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <button onClick={onBack} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>←</button>
+        <span style={{ fontSize: 16, fontWeight: 700, flex: 1, color: "#222" }}>#{batch.numero_transferencia}</span>
         <span style={{
-          fontSize: 12, fontWeight: 500, color: estadoColor[estadoActual],
-          background: estadoBg[estadoActual], borderRadius: 20, padding: "4px 12px",
+          fontSize: 11, fontWeight: 700, color: estadoColor[estadoActual],
+          background: estadoBg[estadoActual], borderRadius: 20, padding: "5px 12px",
         }}>
           {estadoLabel[estadoActual]}
         </span>
@@ -104,21 +115,23 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
       {loading ? (
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
-        <>
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>CANTIDAD PRODUCTO POR ARREGLAR</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#999", letterSpacing: 0.3, textTransform: "uppercase", margin: "0 0 10px" }}>
+            Cantidad producto por arreglar
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {progreso.map((p) => {
               const pct = Math.round((p.completadas / p.cantidad_declarada) * 100);
               return (
-                <div key={p.modelo_codigo} style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div key={p.modelo_codigo} style={{ background: "#fff", borderRadius: 14, padding: "12px 14px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>{p.modelo_codigo}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: p.pendientes === 0 ? "#3b6d11" : "#185fa5" }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#222" }}>{p.modelo_codigo}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: p.pendientes === 0 ? "#2f5c17" : "#0f3d63" }}>
                       {p.completadas}/{p.cantidad_declarada}
                     </span>
                   </div>
-                  <div style={{ background: "#eee", borderRadius: 6, height: 6, overflow: "hidden" }}>
-                    <div style={{ background: p.pendientes === 0 ? "#3b6d11" : "#185fa5", height: "100%", width: `${pct}%`, borderRadius: 6 }} />
+                  <div style={{ background: "#eee", borderRadius: 6, height: 5, overflow: "hidden" }}>
+                    <div style={{ background: p.pendientes === 0 ? "#2f5c17" : "#0f3d63", height: "100%", width: `${pct}%`, borderRadius: 6 }} />
                   </div>
                 </div>
               );
@@ -129,22 +142,24 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
             <button
               onClick={() => onRepararUnidad(batch, modelosDisponibles)}
               style={{
-                width: "100%", padding: 14, fontSize: 15, fontWeight: 600, marginBottom: 20,
-                background: "#185fa5", color: "#fff", border: "none", borderRadius: 12,
+                width: "100%", padding: 15, fontSize: 15, fontWeight: 700, marginBottom: 16,
+                background: "#0f3d63", color: "#fff", border: "none", borderRadius: 14,
               }}
             >
-              🔧 Comenzar reparación
+              Comenzar reparación
             </button>
           )}
 
-          <p style={{ fontSize: 11, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>HISTORIAL DE REPARACIÓN</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#999", letterSpacing: 0.3, textTransform: "uppercase", margin: "0 0 10px" }}>
+            Historial de reparación
+          </p>
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
             {unidades.length === 0 && <p style={{ fontSize: 12, color: "#999" }}>Sin unidades reparadas todavía.</p>}
             {unidades.map((u) => (
-              <div key={u.id} style={{ padding: 12, background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500 }}>
+              <div key={u.id} style={{ padding: 12, background: "#fff", borderRadius: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.04)", flexShrink: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: "#222" }}>
                   <span>{u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}</span>
-                  <span style={{ color: "#666", fontSize: 12 }}>{u.decision}</span>
+                  <span style={{ color: "#666", fontSize: 12, fontWeight: 500 }}>{u.decision}</span>
                 </div>
                 <p style={{ fontSize: 11, color: "#999", margin: "4px 0 0" }}>
                   {(u.piezas_danadas || []).join(", ")}
@@ -153,7 +168,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
