@@ -70,12 +70,14 @@ export default function PiezasReporte({ onBack }) {
   const [mes, setMes] = useState(new Date().getMonth());
   const [anioMensual, setAnioMensual] = useState(new Date().getFullYear());
   const [anioHistorico, setAnioHistorico] = useState(new Date().getFullYear());
+  const [rangoDesde, setRangoDesde] = useState(formatoFecha(new Date(Date.now() - 14 * 86400000)));
+  const [rangoHasta, setRangoHasta] = useState(formatoFecha(new Date()));
   const [unidades, setUnidades] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     cargar();
-  }, [pestana, fechaDia, semanaBase, mes, anioMensual, anioHistorico]);
+  }, [pestana, fechaDia, semanaBase, mes, anioMensual, anioHistorico, rangoDesde, rangoHasta]);
 
   async function cargar() {
     setLoading(true);
@@ -94,6 +96,9 @@ export default function PiezasReporte({ onBack }) {
       const fin = new Date(anioMensual, mes + 1, 0);
       desde = formatoFecha(inicio);
       hasta = formatoFecha(fin);
+    } else if (pestana === "rango") {
+      desde = rangoDesde;
+      hasta = rangoHasta;
     } else {
       desde = `${anioHistorico}-01-01`;
       hasta = `${anioHistorico}-12-31`;
@@ -113,9 +118,21 @@ export default function PiezasReporte({ onBack }) {
   const filasDescartadas = contarPiezas(unidades, DECISIONES_QUE_DESCARTAN);
 
   const tabStyle = (activa) => ({
-    flex: 1, padding: 9, fontSize: 11, fontWeight: 600, border: "none", borderRadius: 9,
+    flex: 1, padding: "8px 4px", fontSize: 10, fontWeight: 600, border: "none", borderRadius: 9,
     background: activa ? "#0f3d63" : "transparent", color: activa ? "#fff" : "#999",
   });
+
+  function etiquetaPeriodo() {
+    if (pestana === "diario") return fechaDia.toLocaleDateString("es-PR", { day: "numeric", month: "short" });
+    if (pestana === "semanal") {
+      const fin = new Date(semanaBase);
+      fin.setDate(fin.getDate() + 6);
+      return `${semanaBase.toLocaleDateString("es-PR", { day: "numeric", month: "short" })} - ${fin.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}`;
+    }
+    if (pestana === "mensual") return `${MESES[mes]} ${anioMensual}`;
+    if (pestana === "rango") return `${new Date(rangoDesde).toLocaleDateString("es-PR", { day: "numeric", month: "short" })} - ${new Date(rangoHasta).toLocaleDateString("es-PR", { day: "numeric", month: "short" })}`;
+    return `${anioHistorico}`;
+  }
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 20, background: "#f5f4f1", minHeight: "100vh", boxSizing: "border-box" }}>
@@ -129,14 +146,13 @@ export default function PiezasReporte({ onBack }) {
         <button onClick={() => setPestana("semanal")} style={tabStyle(pestana === "semanal")}>Semanal</button>
         <button onClick={() => setPestana("mensual")} style={tabStyle(pestana === "mensual")}>Mensual</button>
         <button onClick={() => setPestana("historico")} style={tabStyle(pestana === "historico")}>Histórico</button>
+        <button onClick={() => setPestana("rango")} style={tabStyle(pestana === "rango")}>Rango</button>
       </div>
 
       {pestana === "diario" && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <button onClick={() => setFechaDia(new Date(fechaDia.getTime() - 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>‹</button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>
-            {fechaDia.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}
-          </span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>{etiquetaPeriodo()}</span>
           <button onClick={() => setFechaDia(new Date(fechaDia.getTime() + 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>›</button>
         </div>
       )}
@@ -144,9 +160,7 @@ export default function PiezasReporte({ onBack }) {
       {pestana === "semanal" && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() - 7 * 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>‹</button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>
-            {semanaBase.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}
-          </span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>{etiquetaPeriodo()}</span>
           <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() + 7 * 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>›</button>
         </div>
       )}
@@ -168,19 +182,32 @@ export default function PiezasReporte({ onBack }) {
         </select>
       )}
 
+      {pestana === "rango" && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 10, color: "#999", margin: "0 0 4px" }}>Desde</p>
+            <input type="date" value={rangoDesde} onChange={(e) => setRangoDesde(e.target.value)} style={{ width: "100%", padding: 9, borderRadius: 10, border: "1px solid #e4e2da", fontSize: 12, boxSizing: "border-box" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 10, color: "#999", margin: "0 0 4px" }}>Hasta</p>
+            <input type="date" value={rangoHasta} onChange={(e) => setRangoHasta(e.target.value)} style={{ width: "100%", padding: 9, borderRadius: 10, border: "1px solid #e4e2da", fontSize: 12, boxSizing: "border-box" }} />
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
           <TablaPiezas
             titulo="Piezas reemplazadas"
-            nota="Estas sí consumen inventario"
+            nota={`${etiquetaPeriodo()} · estas sí consumen inventario`}
             notaColor="#2f5c17"
             filas={filasReemplazadas}
           />
           <TablaPiezas
             titulo="Piezas encontradas en unidades descartadas"
-            nota="Solo diagnóstico · no representa consumo de inventario"
+            nota={`${etiquetaPeriodo()} · solo diagnóstico`}
             notaColor="#93650f"
             filas={filasDescartadas}
           />
