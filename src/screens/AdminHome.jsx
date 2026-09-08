@@ -1,4 +1,4 @@
-export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onSalir }) {
+export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onSalir }) {
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -13,19 +13,25 @@ export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, o
           onClick={onVerRevision}
           style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#fdf3e3", border: "none", borderRadius: 12, textAlign: "left" }}
         >
-          ⏳ Revisión de batches
+          Revisión de batches
+        </button>
+        <button
+          onClick={onVerReparaciones}
+          style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#e6f0dd", border: "none", borderRadius: 12, textAlign: "left" }}
+        >
+          Reparaciones del equipo
         </button>
         <button
           onClick={onVerEstadisticas}
           style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#eef3fb", border: "none", borderRadius: 12, textAlign: "left" }}
         >
-          📊 Estadísticas
+          Estadísticas
         </button>
         <button
           onClick={onVerLeaderboard}
           style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#eaf3de", border: "none", borderRadius: 12, textAlign: "left" }}
         >
-          🏆 Ranking de técnicos
+          Ranking de técnicos
         </button>
       </div>
     </div>
