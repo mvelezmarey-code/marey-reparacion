@@ -1,4 +1,4 @@
-export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onSalir }) {
+export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onVerPiezas, onSalir }) {
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -20,6 +20,12 @@ export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, o
           style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#e6f0dd", border: "none", borderRadius: 12, textAlign: "left" }}
         >
           Reparaciones del equipo
+        </button>
+        <button
+          onClick={onVerPiezas}
+          style={{ padding: 18, fontSize: 15, fontWeight: 600, background: "#fdf0dc", border: "none", borderRadius: 12, textAlign: "left" }}
+        >
+          Reporte de piezas
         </button>
         <button
           onClick={onVerEstadisticas}
