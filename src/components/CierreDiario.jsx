@@ -79,6 +79,7 @@ export default function CierreDiario({ tecnico, onDesbloqueado }) {
       </div>
 
       <p style={{ fontSize: 19, fontWeight: 700, margin: "0 0 8px", textAlign: "center", color: "#222" }}>Fin del día</p>
+      <p style={{ fontSize: 13, color: "#666", margin: "0 0 8px", textAlign: "center" }}>{tecnico}</p>
       <p style={{ fontSize: 13, color: "#666", margin: "0 0 32px", textAlign: "center", maxWidth: 280 }}>
         Toma una foto de tu área recogida para desbloquear el sistema
       </p>
