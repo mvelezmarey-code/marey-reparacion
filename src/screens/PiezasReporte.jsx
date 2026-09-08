@@ -16,7 +16,7 @@ function formatoFecha(fecha) {
   return fecha.toISOString().split("T")[0];
 }
 
-function contarPiezas(unidades, filtroDecisiones) {
+function contarPiezasIndividuales(unidades, filtroDecisiones) {
   const conteo = {};
   unidades
     .filter((u) => filtroDecisiones.includes(u.decision))
@@ -30,16 +30,30 @@ function contarPiezas(unidades, filtroDecisiones) {
     .sort((a, b) => b.cantidad - a.cantidad);
 }
 
-function TablaPiezas({ titulo, nota, notaColor, filas }) {
+function contarCombinaciones(unidades, filtroDecisiones) {
+  const conteo = {};
+  unidades
+    .filter((u) => filtroDecisiones.includes(u.decision))
+    .forEach((u) => {
+      const piezas = [...(u.piezas_danadas || [])].sort();
+      const clave = piezas.join(" + ") || "Ninguna";
+      conteo[clave] = (conteo[clave] || 0) + 1;
+    });
+  return Object.entries(conteo)
+    .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad);
+}
+
+function TablaGenerica({ titulo, nota, notaColor, filas, columnaLabel }) {
   const total = filas.reduce((a, f) => a + f.cantidad, 0);
   return (
     <>
       <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "16px 0 2px" }}>{titulo}</p>
-      <p style={{ fontSize: 11, color: notaColor, margin: "0 0 8px" }}>{nota}</p>
-      <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden" }}>
+      {nota && <p style={{ fontSize: 11, color: notaColor, margin: "0 0 8px" }}>{nota}</p>}
+      <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden" }}>
         <thead>
           <tr style={{ background: "#f5f4f1" }}>
-            <td style={{ padding: "8px 12px", fontWeight: 600, color: "#666" }}>Pieza</td>
+            <td style={{ padding: "8px 12px", fontWeight: 600, color: "#666" }}>{columnaLabel}</td>
             <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600, color: "#666" }}>Cantidad</td>
           </tr>
         </thead>
@@ -114,8 +128,9 @@ export default function PiezasReporte({ onBack }) {
     setLoading(false);
   }
 
-  const filasReemplazadas = contarPiezas(unidades, DECISIONES_QUE_REEMPLAZAN);
-  const filasDescartadas = contarPiezas(unidades, DECISIONES_QUE_DESCARTAN);
+  const filasReemplazadas = contarPiezasIndividuales(unidades, DECISIONES_QUE_REEMPLAZAN);
+  const filasCombinacionesDescarte = contarCombinaciones(unidades, DECISIONES_QUE_DESCARTAN);
+  const filasIndividualesDescarte = contarPiezasIndividuales(unidades, DECISIONES_QUE_DESCARTAN);
 
   const tabStyle = (activa) => ({
     flex: 1, padding: "8px 4px", fontSize: 10, fontWeight: 600, border: "none", borderRadius: 9,
@@ -199,17 +214,28 @@ export default function PiezasReporte({ onBack }) {
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
-          <TablaPiezas
+          <TablaGenerica
             titulo="Piezas reemplazadas"
             nota={`${etiquetaPeriodo()} · estas sí consumen inventario`}
             notaColor="#2f5c17"
+            columnaLabel="Pieza"
             filas={filasReemplazadas}
           />
-          <TablaPiezas
-            titulo="Piezas encontradas en unidades descartadas"
-            nota={`${etiquetaPeriodo()} · solo diagnóstico`}
+
+          <TablaGenerica
+            titulo="Combinaciones en unidades descartadas"
+            nota={`${etiquetaPeriodo()} · piezas que aparecieron juntas en la misma unidad`}
             notaColor="#93650f"
-            filas={filasDescartadas}
+            columnaLabel="Combinación"
+            filas={filasCombinacionesDescarte}
+          />
+
+          <TablaGenerica
+            titulo="Desglose por pieza individual (descartadas)"
+            nota="Frecuencia de cada pieza dentro de las combinaciones de arriba · no es causa única"
+            notaColor="#93650f"
+            columnaLabel="Pieza"
+            filas={filasIndividualesDescarte}
           />
         </>
       )}
