@@ -14,7 +14,12 @@ import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
 import CierreDiario from "./components/CierreDiario";
 
+// MODO DE PRUEBA: cambia a true para forzar el bloqueo sin esperar a las 3:30pm reales.
+// Recuerda volver a false (o quitar esta línea) antes de usar en producción real.
+const FORZAR_CIERRE_PARA_PRUEBA = true;
+
 function esDespuesDe330pm() {
+  if (FORZAR_CIERRE_PARA_PRUEBA) return true;
   const ahora = new Date();
   return ahora.getHours() > 15 || (ahora.getHours() === 15 && ahora.getMinutes() >= 30);
 }
