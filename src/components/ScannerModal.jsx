@@ -1,57 +1,63 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
 export default function ScannerModal({ onScan, onClose }) {
   const videoRef = useRef(null);
-  const controlsRef = useRef(null);
+  const streamRef = useRef(null);
+  const animRef = useRef(null);
   const [errorCam, setErrorCam] = useState(false);
+  const [noSoportado, setNoSoportado] = useState(false);
   const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     let activo = true;
 
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.ITF,
-      BarcodeFormat.QR_CODE,
-    ]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
+    if (!("BarcodeDetector" in window)) {
+      setNoSoportado(true);
+      return;
+    }
 
-    const reader = new BrowserMultiFormatReader(hints);
+    const detector = new window.BarcodeDetector({
+      formats: ["code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "itf", "qr_code"],
+    });
 
-    reader
-      .decodeFromConstraints(
-        {
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-        },
-        videoRef.current,
-        (result, err, controls) => {
-          controlsRef.current = controls;
-          if (result && activo) {
-            activo = false;
-            onScan(result.getText());
-            controls.stop();
-          }
+    async function iniciar() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
         }
-      )
-      .catch(() => {
+        detectarLoop();
+      } catch (e) {
         setErrorCam(true);
-      });
+      }
+    }
+
+    async function detectarLoop() {
+      if (!activo || !videoRef.current) return;
+      try {
+        const codigos = await detector.detect(videoRef.current);
+        if (codigos.length > 0 && activo) {
+          activo = false;
+          onScan(codigos[0].rawValue);
+          return;
+        }
+      } catch (e) {
+        // frame no válido todavía, seguir intentando
+      }
+      animRef.current = requestAnimationFrame(detectarLoop);
+    }
+
+    iniciar();
 
     return () => {
       activo = false;
-      if (controlsRef.current) {
-        controlsRef.current.stop();
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
   }, [intento]);
@@ -61,12 +67,28 @@ export default function ScannerModal({ onScan, onClose }) {
     setIntento((n) => n + 1);
   }
 
+  if (noSoportado) {
+    return (
+      <div style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: 20,
+      }}>
+        <p style={{ color: "#fff", fontSize: 14, marginBottom: 16, textAlign: "center" }}>
+          Tu navegador no soporta el escáner nativo. Actualiza Safari/iOS o escribe el número manualmente.
+        </p>
+        <button onClick={onClose} style={{ padding: "12px 28px", background: "#fff", borderRadius: 10, fontSize: 14, fontWeight: 600, border: "none" }}>
+          Cerrar
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 2000,
     }}>
-      <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta la cámara al código de barras</p>
+      <p style={{ color: "#fff", fontSize: 14, marginBottom: 4, textAlign: "center" }}>Apunta la cámara al código</p>
       <p style={{ color: "#aaa", fontSize: 12, marginBottom: 16, textAlign: "center" }}>Mantén el código recto y dentro del marco</p>
 
       {errorCam ? (
