@@ -5,6 +5,7 @@ import ScannerModal from "../components/ScannerModal";
 const DECISIONES_QUE_REQUIEREN_NEW_SN = ["Refurbished", "Nuevo"];
 const TOTAL_PASOS = 4;
 const LARGO_SERIAL = 11;
+const CLAVE_ESTADO = "unidadform_estado_temporal";
 
 export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack, onGuardada }) {
   const [paso, setPaso] = useState(1);
@@ -21,6 +22,37 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [escaneando, setEscaneando] = useState(null);
   const [startedAt] = useState(() => new Date().toISOString());
+
+  // Al montar: revisa si venimos de regreso de Atajos con un resultado
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const escaneado = params.get("result");
+
+    if (escaneado) {
+      const estadoGuardado = localStorage.getItem(CLAVE_ESTADO);
+      if (estadoGuardado) {
+        const estado = JSON.parse(estadoGuardado);
+        const limpio = limpiarSerial(escaneado);
+
+        setModelo(estado.modelo);
+        setPiezas(estado.piezas || []);
+        setDecision(estado.decision || "");
+        setOldSnNa(estado.oldSnNa || false);
+
+        if (estado.destino === "old") {
+          setOldSn(limpio);
+          setNewSn(estado.newSn || "");
+          setPaso(2);
+        } else if (estado.destino === "new") {
+          setOldSn(estado.oldSn || "");
+          setNewSn(limpio);
+          setPaso(4);
+        }
+        localStorage.removeItem(CLAVE_ESTADO);
+      }
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     cargarCatalogo();
@@ -57,22 +89,24 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return valor.replace(/\D/g, "").slice(0, LARGO_SERIAL);
   }
 
-  async function pegarDesdePortapapeles(destino) {
-    try {
-      const texto = await navigator.clipboard.readText();
-      const limpio = limpiarSerial(texto);
-      if (destino === "old") setOldSn(limpio);
-      if (destino === "new") setNewSn(limpio);
-    } catch (e) {
-      setError("No se pudo leer el portapapeles. Pégalo manualmente en el campo.");
-    }
-  }
-
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
   const tieneNinguna = piezas.includes("Ninguna");
 
   function decisionBloqueada(nombreDecision) {
     return tieneNinguna && nombreDecision === "Descartar";
+  }
+
+  function abrirEscaneo(destino) {
+    localStorage.setItem(CLAVE_ESTADO, JSON.stringify({
+      destino,
+      modelo,
+      piezas,
+      decision,
+      oldSn,
+      oldSnNa,
+      newSn,
+    }));
+    setEscaneando(destino);
   }
 
   function siguiente() {
@@ -241,27 +275,17 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         {paso === 2 && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>Número de serie</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Escanea con Atajos y pega el resultado, o escríbelo</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Escanea con Atajos, o escríbelo ({LARGO_SERIAL} dígitos)</p>
             <button
-              onClick={() => setEscaneando("old")}
+              onClick={() => abrirEscaneo("old")}
               disabled={oldSnNa}
               style={{
-                width: "100%", padding: "20px", borderRadius: 16, textAlign: "center",
+                width: "100%", padding: "28px 20px", borderRadius: 16, textAlign: "center",
                 background: oldSnNa ? "#f4f3ee" : "#0f3d63", color: oldSnNa ? "#999" : "#fff",
-                border: "none", marginBottom: 8,
+                border: "none", marginBottom: 12,
               }}
             >
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Abrir escáner (Atajos)</p>
-            </button>
-            <button
-              onClick={() => pegarDesdePortapapeles("old")}
-              disabled={oldSnNa}
-              style={{
-                width: "100%", padding: 12, borderRadius: 12, textAlign: "center",
-                background: "#eaf0f7", color: "#0f3d63", border: "1px solid #0f3d63", marginBottom: 12, fontSize: 14, fontWeight: 600,
-              }}
-            >
-              Pegar número escaneado
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{oldSn ? oldSn : "Escanear código"}</p>
             </button>
             <input
               value={oldSn}
@@ -315,22 +339,13 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             {requiereNewSn && (
               <>
                 <button
-                  onClick={() => setEscaneando("new")}
+                  onClick={() => abrirEscaneo("new")}
                   style={{
                     width: "100%", padding: "20px", borderRadius: 16, textAlign: "center",
                     background: "#0f3d63", color: "#fff", border: "none", marginBottom: 8,
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Abrir escáner (Atajos)</p>
-                </button>
-                <button
-                  onClick={() => pegarDesdePortapapeles("new")}
-                  style={{
-                    width: "100%", padding: 12, borderRadius: 12, textAlign: "center",
-                    background: "#eaf0f7", color: "#0f3d63", border: "1px solid #0f3d63", marginBottom: 8, fontSize: 14, fontWeight: 600,
-                  }}
-                >
-                  Pegar número escaneado
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{newSn ? newSn : "Escanear nuevo SN"}</p>
                 </button>
                 <input
                   value={newSn}
