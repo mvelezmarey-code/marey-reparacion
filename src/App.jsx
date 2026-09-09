@@ -25,11 +25,9 @@ export default function App() {
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
   const [restaurando, setRestaurando] = useState(true);
 
-  // Al cargar la app, revisa si veníamos de un escaneo con Atajos
-  // y restaura el batch/formulario donde estábamos
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const vieneDeEscaneo = params.has("scanned");
+    const vieneDeEscaneo = params.has("result");
 
     if (vieneDeEscaneo) {
       const batchGuardado = localStorage.getItem(CLAVE_BATCH_ACTIVO);
@@ -44,8 +42,6 @@ export default function App() {
     setRestaurando(false);
   }, []);
 
-  // Cada vez que cambian batchActivo o modelosParaFormulario, los guardamos
-  // por si el técnico sale a escanear con Atajos
   useEffect(() => {
     if (batchActivo) {
       localStorage.setItem(CLAVE_BATCH_ACTIVO, JSON.stringify(batchActivo));
