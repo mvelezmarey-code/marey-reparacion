@@ -61,6 +61,12 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   }
 
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
+  const tieneNinguna = piezas.includes("Ninguna");
+
+  function decisionBloqueada(nombreDecision) {
+    // No tiene sentido descartar una unidad que no tiene ninguna pieza dañada
+    return tieneNinguna && nombreDecision === "Descartar";
+  }
 
   function siguiente() {
     setError("");
@@ -83,6 +89,10 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     if (paso === TOTAL_PASOS) {
       if (!decision) {
         setError("Selecciona una decisión.");
+        return;
+      }
+      if (decisionBloqueada(decision)) {
+        setError("No puedes descartar una unidad sin piezas dañadas.");
         return;
       }
       if (requiereNewSn) {
@@ -151,11 +161,11 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     width: "100%", padding: 14, fontSize: 14, fontWeight: 600,
     background: "#f4f3ee", color: "#333", border: "none", borderRadius: 14,
   };
-  const chip = (activo) => ({
+  const chip = (activo, deshabilitado) => ({
     padding: "12px 16px", borderRadius: 12, fontSize: 14, fontWeight: 500,
     border: activo ? "1.5px solid #0f3d63" : "1px solid #e4e2da",
-    background: activo ? "#eaf0f7" : "#fff",
-    color: activo ? "#0f3d63" : "#333",
+    background: deshabilitado ? "#f4f3ee" : activo ? "#eaf0f7" : "#fff",
+    color: deshabilitado ? "#bbb" : activo ? "#0f3d63" : "#333",
   });
   const inputStyle = {
     width: "100%", padding: 12, border: "1px solid #e4e2da", borderRadius: 10, boxSizing: "border-box", fontSize: 14,
@@ -223,7 +233,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Solo modelos pendientes de este batch</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {modelosDisponibles.map((m) => (
-                <button key={m.modelo_codigo} onClick={() => setModelo(m.modelo_codigo)} style={chip(modelo === m.modelo_codigo)}>
+                <button key={m.modelo_codigo} onClick={() => setModelo(m.modelo_codigo)} style={chip(modelo === m.modelo_codigo, false)}>
                   {m.modelo_codigo}
                 </button>
               ))}
@@ -234,7 +244,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         {paso === 2 && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>Número de serie</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 20px" }}>Escanea el código, o escríbelo ({LARGO_SERIAL} dígitos)</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Escanea el código, o escríbelo ({LARGO_SERIAL} dígitos)</p>
             <button
               onClick={() => setEscaneando("old")}
               disabled={oldSnNa}
@@ -268,7 +278,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             <p style={{ fontSize: 13, color: "#999", margin: "0 0 20px" }}>Puedes seleccionar más de una</p>
             <div style={{ flex: 1, overflowY: "auto", display: "flex", flexWrap: "wrap", gap: 8, alignContent: "flex-start" }}>
               {catalogoPiezas.map((p) => (
-                <button key={p.nombre} onClick={() => togglePieza(p.nombre, p.es_ninguna)} style={chip(piezas.includes(p.nombre))}>
+                <button key={p.nombre} onClick={() => togglePieza(p.nombre, p.es_ninguna)} style={chip(piezas.includes(p.nombre), false)}>
                   {p.nombre}
                 </button>
               ))}
@@ -279,13 +289,21 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         {paso === 4 && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>¿Qué se hizo con ella?</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 20px" }}>Selecciona la decisión final</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Selecciona la decisión final</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: requiereNewSn ? 12 : 0 }}>
-              {catalogoDecisiones.map((d) => (
-                <button key={d.decision} onClick={() => setDecision(d.decision)} style={chip(decision === d.decision)}>
-                  {d.decision}
-                </button>
-              ))}
+              {catalogoDecisiones.map((d) => {
+                const bloqueada = decisionBloqueada(d.decision);
+                return (
+                  <button
+                    key={d.decision}
+                    onClick={() => !bloqueada && setDecision(d.decision)}
+                    disabled={bloqueada}
+                    style={chip(decision === d.decision, bloqueada)}
+                  >
+                    {d.decision}{bloqueada ? " (no disponible sin piezas dañadas)" : ""}
+                  </button>
+                );
+              })}
             </div>
             {requiereNewSn && (
               <>
