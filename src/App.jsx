@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 import { useTecnicoActual } from "./lib/session";
 import SeleccionTecnico from "./screens/SeleccionTecnico";
 import Home from "./screens/Home";
@@ -14,11 +15,49 @@ import Historial from "./screens/Historial";
 import Reparaciones from "./screens/Reparaciones";
 import PiezasReporte from "./screens/PiezasReporte";
 
+const CLAVE_BATCH_ACTIVO = "app_batch_activo_temporal";
+const CLAVE_MODELOS_FORM = "app_modelos_form_temporal";
+
 export default function App() {
   const { tecnico, esAdmin, setTecnico } = useTecnicoActual();
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
+  const [restaurando, setRestaurando] = useState(true);
+
+  // Al cargar la app, revisa si veníamos de un escaneo con Atajos
+  // y restaura el batch/formulario donde estábamos
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vieneDeEscaneo = params.has("scanned");
+
+    if (vieneDeEscaneo) {
+      const batchGuardado = localStorage.getItem(CLAVE_BATCH_ACTIVO);
+      const modelosGuardados = localStorage.getItem(CLAVE_MODELOS_FORM);
+
+      if (batchGuardado) {
+        setBatchActivo(JSON.parse(batchGuardado));
+        setModelosParaFormulario(modelosGuardados ? JSON.parse(modelosGuardados) : []);
+        setVista("unidad");
+      }
+    }
+    setRestaurando(false);
+  }, []);
+
+  // Cada vez que cambian batchActivo o modelosParaFormulario, los guardamos
+  // por si el técnico sale a escanear con Atajos
+  useEffect(() => {
+    if (batchActivo) {
+      localStorage.setItem(CLAVE_BATCH_ACTIVO, JSON.stringify(batchActivo));
+    }
+    if (modelosParaFormulario.length > 0) {
+      localStorage.setItem(CLAVE_MODELOS_FORM, JSON.stringify(modelosParaFormulario));
+    }
+  }, [batchActivo, modelosParaFormulario]);
+
+  if (restaurando) {
+    return null;
+  }
 
   if (!tecnico) {
     return <SeleccionTecnico onSelect={setTecnico} />;
@@ -56,7 +95,11 @@ export default function App() {
         modelosDisponibles={modelosParaFormulario}
         tecnico={tecnico}
         onBack={() => setVista("batch")}
-        onGuardada={() => setVista("batch")}
+        onGuardada={() => {
+          localStorage.removeItem(CLAVE_BATCH_ACTIVO);
+          localStorage.removeItem(CLAVE_MODELOS_FORM);
+          setVista("batch");
+        }}
       />
     );
   }
