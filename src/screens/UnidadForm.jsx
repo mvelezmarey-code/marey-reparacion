@@ -5,6 +5,7 @@ import ScannerModal from "../components/ScannerModal";
 const DECISIONES_QUE_REQUIEREN_NEW_SN = ["Refurbished", "Nuevo"];
 const TOTAL_PASOS = 4;
 const LARGO_SERIAL = 11;
+const CLAVE_ESTADO = "unidadform_estado_temporal";
 
 export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack, onGuardada }) {
   const [paso, setPaso] = useState(1);
@@ -20,32 +21,42 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [escaneando, setEscaneando] = useState(null);
-  const startedAt = useState(() => new Date().toISOString())[0];
+  const [startedAt] = useState(() => new Date().toISOString());
+
+  // Al montar: revisa si venimos de regreso de Atajos con un resultado
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const escaneado = params.get("scanned");
+
+    if (escaneado) {
+      const estadoGuardado = localStorage.getItem(CLAVE_ESTADO);
+      if (estadoGuardado) {
+        const estado = JSON.parse(estadoGuardado);
+        const limpio = limpiarSerial(escaneado);
+
+        setModelo(estado.modelo);
+        setPiezas(estado.piezas || []);
+        setDecision(estado.decision || "");
+        setOldSnNa(estado.oldSnNa || false);
+
+        if (estado.destino === "old") {
+          setOldSn(limpio);
+          setNewSn(estado.newSn || "");
+          setPaso(2);
+        } else if (estado.destino === "new") {
+          setOldSn(estado.oldSn || "");
+          setNewSn(limpio);
+          setPaso(4);
+        }
+        localStorage.removeItem(CLAVE_ESTADO);
+      }
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     cargarCatalogo();
   }, [modelo]);
-
-  // Detecta si regresamos de Atajos con un resultado escaneado
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const escaneado = params.get("scanned");
-    const destino = localStorage.getItem("escaneo_destino");
-
-    if (escaneado && destino) {
-      const limpio = limpiarSerial(escaneado);
-      if (destino === "old") {
-        setOldSn(limpio);
-        setPaso(2);
-      }
-      if (destino === "new") {
-        setNewSn(limpio);
-        setPaso(4);
-      }
-      localStorage.removeItem("escaneo_destino");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   async function cargarCatalogo() {
     const { data: piezasData } = await supabase
@@ -58,9 +69,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       .eq("modelo_codigo", modelo);
     setCatalogoPiezas(piezasData || []);
     setCatalogoDecisiones(decisionesData || []);
-    setPiezas([]);
-    setDecision("");
-    setNewSn("");
   }
 
   function togglePieza(nombre, esNinguna) {
@@ -89,7 +97,16 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   }
 
   function abrirEscaneo(destino) {
-    localStorage.setItem("escaneo_destino", destino);
+    // Guarda TODO el contexto actual antes de salir a Atajos
+    localStorage.setItem(CLAVE_ESTADO, JSON.stringify({
+      destino,
+      modelo,
+      piezas,
+      decision,
+      oldSn,
+      oldSnNa,
+      newSn,
+    }));
     setEscaneando(destino);
   }
 
@@ -197,11 +214,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   };
 
   if (escaneando) {
-    return (
-      <ScannerModal
-        onClose={() => setEscaneando(null)}
-      />
-    );
+    return <ScannerModal onClose={() => setEscaneando(null)} />;
   }
 
   if (mostrarConfirmacion) {
@@ -273,7 +286,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
                 border: "none", marginBottom: 12,
               }}
             >
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Escanear código</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{oldSn ? oldSn : "Escanear código"}</p>
             </button>
             <input
               value={oldSn}
@@ -333,7 +346,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
                     background: "#0f3d63", color: "#fff", border: "none", marginBottom: 8,
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Escanear nuevo SN</p>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{newSn ? newSn : "Escanear nuevo SN"}</p>
                 </button>
                 <input
                   value={newSn}
