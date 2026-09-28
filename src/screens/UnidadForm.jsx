@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import ScannerModal from "../components/ScannerModal";
+import Asistente from "./Asistente";
 
 const DECISIONES_QUE_REQUIEREN_NEW_SN = ["Refurbished", "Nuevo"];
 const TOTAL_PASOS = 4;
@@ -21,6 +22,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [escaneando, setEscaneando] = useState(null);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [startedAt] = useState(() => new Date().toISOString());
 
   // Al montar: revisa si venimos de regreso de Atajos con un resultado
@@ -216,6 +218,18 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return <ScannerModal onClose={() => setEscaneando(null)} />;
   }
 
+  // Ayuda opcional: se abre encima del formulario y al cerrar vuelve al mismo paso,
+  // con todo lo que el técnico ya había marcado.
+  if (mostrarAyuda) {
+    return (
+      <Asistente
+        modeloInicial={modelo}
+        serialInicial={oldSnNa ? "" : oldSn}
+        onBack={() => setMostrarAyuda(false)}
+      />
+    );
+  }
+
   if (mostrarConfirmacion) {
     return (
       <div style={shellStyle}>
@@ -249,6 +263,13 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: 12, color: "#999", fontWeight: 600 }}>PASO {paso} DE {TOTAL_PASOS}</p>
         </div>
+        <button
+          onClick={() => setMostrarAyuda(true)}
+          aria-label="Ayuda con esta reparación"
+          style={{ width: 40, height: 40, borderRadius: 10, border: "1px solid #e4e2da", background: "#fff", color: "#0f3d63", fontSize: 18, fontWeight: 700 }}
+        >
+          ?
+        </button>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
