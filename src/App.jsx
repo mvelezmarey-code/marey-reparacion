@@ -14,6 +14,7 @@ import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
 import Reparaciones from "./screens/Reparaciones";
 import PiezasReporte from "./screens/PiezasReporte";
+import Asistente from "./screens/Asistente";
 
 const CLAVE_BATCH_ACTIVO = "app_batch_activo_temporal";
 const CLAVE_MODELOS_FORM = "app_modelos_form_temporal";
@@ -124,6 +125,10 @@ export default function App() {
     return <Reparaciones tecnico={tecnico} onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
 
+  if (vista === "asistente") {
+    return <Asistente onBack={() => setVista(esAdmin ? "admin" : "home")} />;
+  }
+
   if (vista === "piezas" && esAdmin) {
     return <PiezasReporte onBack={() => setVista("admin")} />;
   }
@@ -174,6 +179,7 @@ export default function App() {
       onVerHistorial={() => setVista("historial")}
       onVerEstadisticas={() => setVista("estadisticas")}
       onVerReparaciones={() => setVista("reparaciones")}
+      onVerAsistente={() => setVista("asistente")}
       onSalir={() => setTecnico(null)}
     />
   );
