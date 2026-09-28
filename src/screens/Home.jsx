@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onVerReparaciones, onSalir }) {
+export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onVerReparaciones, onVerAsistente, onSalir }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -128,6 +128,13 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
             style={{ width: "100%", padding: 14, fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid #e4e2da", borderRadius: 14, color: "#333" }}
           >
             Ver estadísticas completas
+          </button>
+
+          <button
+            onClick={onVerAsistente}
+            style={{ width: "100%", padding: 14, fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid #e4e2da", borderRadius: 14, color: "#333" }}
+          >
+            Videos y guías de reparación
           </button>
         </div>
       )}
