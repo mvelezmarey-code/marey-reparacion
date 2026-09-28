@@ -6,7 +6,6 @@ import Asistente from "./Asistente";
 const DECISIONES_QUE_REQUIEREN_NEW_SN = ["Refurbished", "Nuevo"];
 const TOTAL_PASOS = 4;
 const LARGO_SERIAL = 11;
-const CLAVE_ESTADO = "unidadform_estado_temporal";
 
 export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack, onGuardada }) {
   const [paso, setPaso] = useState(1);
@@ -24,37 +23,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [escaneando, setEscaneando] = useState(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [startedAt] = useState(() => new Date().toISOString());
-
-  // Al montar: revisa si venimos de regreso de Atajos con un resultado
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const escaneado = params.get("result");
-
-    if (escaneado) {
-      const estadoGuardado = localStorage.getItem(CLAVE_ESTADO);
-      if (estadoGuardado) {
-        const estado = JSON.parse(estadoGuardado);
-        const limpio = limpiarSerial(escaneado);
-
-        setModelo(estado.modelo);
-        setPiezas(estado.piezas || []);
-        setDecision(estado.decision || "");
-        setOldSnNa(estado.oldSnNa || false);
-
-        if (estado.destino === "old") {
-          setOldSn(limpio);
-          setNewSn(estado.newSn || "");
-          setPaso(2);
-        } else if (estado.destino === "new") {
-          setOldSn(estado.oldSn || "");
-          setNewSn(limpio);
-          setPaso(4);
-        }
-        localStorage.removeItem(CLAVE_ESTADO);
-      }
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   useEffect(() => {
     cargarCatalogo();
@@ -99,15 +67,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   }
 
   function abrirEscaneo(destino) {
-    localStorage.setItem(CLAVE_ESTADO, JSON.stringify({
-      destino,
-      modelo,
-      piezas,
-      decision,
-      oldSn,
-      oldSnNa,
-      newSn,
-    }));
     setEscaneando(destino);
   }
 
@@ -215,7 +174,17 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   };
 
   if (escaneando) {
-    return <ScannerModal onClose={() => setEscaneando(null)} />;
+    return (
+      <ScannerModal
+        onClose={() => setEscaneando(null)}
+        onScan={(serial) => {
+          const limpio = limpiarSerial(serial);
+          if (escaneando === "old") setOldSn(limpio);
+          if (escaneando === "new") setNewSn(limpio);
+          setEscaneando(null);
+        }}
+      />
+    );
   }
 
   // Ayuda opcional: se abre encima del formulario y al cerrar vuelve al mismo paso,
@@ -296,7 +265,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         {paso === 2 && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>Número de serie</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Escanea con Atajos, o escríbelo ({LARGO_SERIAL} dígitos)</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Toma una foto de la etiqueta, o escríbelo ({LARGO_SERIAL} dígitos)</p>
             <button
               onClick={() => abrirEscaneo("old")}
               disabled={oldSnNa}
@@ -306,7 +275,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
                 border: "none", marginBottom: 12,
               }}
             >
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{oldSn ? oldSn : "Escanear código"}</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{oldSn ? oldSn : "Tomar foto de la etiqueta"}</p>
             </button>
             <input
               value={oldSn}
@@ -366,7 +335,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
                     background: "#0f3d63", color: "#fff", border: "none", marginBottom: 8,
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{newSn ? newSn : "Escanear nuevo SN"}</p>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{newSn ? newSn : "Tomar foto del nuevo SN"}</p>
                 </button>
                 <input
                   value={newSn}
