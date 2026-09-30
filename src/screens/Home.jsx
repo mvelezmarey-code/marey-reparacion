@@ -150,7 +150,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
             <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Historial de arreglados</p>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: MUTED }}>Completados y en revisión</p>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: NAVY, background: "#eef4fb", borderRadius: 20, padding: "5px 12px" }}>{historialCount}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, background: "#eef4fb", borderRadius: 20, padding: "5px 12px" }}>{historialCount}</span>
         </button>
       </div>
 
