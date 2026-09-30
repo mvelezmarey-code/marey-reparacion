@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const NAVY = "#0f3d63";
+const TEXT = "#10151c";
+const MUTED = "#6b7685";
+const LINE = "#edf0f4";
+const SURF = "#f7f9fc";
+const TU_BG = "#fdf0dc";
+const TU_TX = "#93650f";
+
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
@@ -25,6 +33,14 @@ function descargarCSV(nombreArchivo, filas) {
   a.download = nombreArchivo;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function Flecha({ dir }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      {dir === "izq" ? <path d="M15 18l-6-6 6-6"></path> : <path d="M9 18l6-6-6-6"></path>}
+    </svg>
+  );
 }
 
 export default function Reparaciones({ tecnico, onBack }) {
@@ -188,228 +204,230 @@ export default function Reparaciones({ tecnico, onBack }) {
     }
   }
 
+  // ---- estilos premium ----
+  const shellStyle = {
+    height: "100dvh", maxWidth: 480, margin: "0 auto", padding: "18px 20px 0",
+    display: "flex", flexDirection: "column", boxSizing: "border-box",
+    background: "#fff", color: TEXT, overflow: "hidden", WebkitFontSmoothing: "antialiased",
+  };
   const tabStyle = (activa) => ({
-    flex: 1, padding: 9, fontSize: 11, fontWeight: 600, border: "none", borderRadius: 9,
-    background: activa ? "#0f3d63" : "transparent", color: activa ? "#fff" : "#999",
+    flex: 1, padding: "9px 4px", fontSize: 12, fontWeight: 700, border: "none", borderRadius: 10,
+    background: activa ? NAVY : "transparent", color: activa ? "#fff" : MUTED,
   });
+  const navBtn = { width: 36, height: 36, borderRadius: 18, border: "none", background: SURF, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  const selectStyle = { flex: 1, padding: 12, borderRadius: 12, border: `1px solid #e6e8ec`, background: "#fff", fontSize: 14, color: TEXT };
+  const th = { padding: "9px 8px", textAlign: "center", color: MUTED, fontWeight: 600, fontSize: 11 };
+  const td = (esTu) => ({ padding: "9px 8px", textAlign: "center", color: esTu ? TU_TX : TEXT });
 
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", padding: 20, background: "#f5f4f1", minHeight: "100vh", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <button onClick={onBack} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>←</button>
-        <span style={{ fontSize: 16, fontWeight: 700, flex: 1, color: "#222" }}>Reparaciones</span>
-        <button onClick={exportar} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff", fontSize: 12, fontWeight: 600, color: "#333" }}>
+    <div style={shellStyle}>
+      {/* Header fijo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexShrink: 0 }}>
+        <button onClick={onBack} aria-label="Volver" style={{ width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+        </button>
+        <span style={{ fontSize: 17, fontWeight: 700, flex: 1 }}>Reparaciones del equipo</span>
+        <button onClick={exportar} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 12, border: `1px solid #e6e8ec`, background: "#fff", fontSize: 12, fontWeight: 700, color: NAVY }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
           Exportar
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, background: "#fff", padding: 4, borderRadius: 12 }}>
+      {/* Tabs fijas */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 14, background: SURF, padding: 4, borderRadius: 13, flexShrink: 0 }}>
         <button onClick={() => setPestana("diario")} style={tabStyle(pestana === "diario")}>Diario</button>
         <button onClick={() => setPestana("semanal")} style={tabStyle(pestana === "semanal")}>Semanal</button>
         <button onClick={() => setPestana("mensual")} style={tabStyle(pestana === "mensual")}>Mensual</button>
         <button onClick={() => setPestana("historico")} style={tabStyle(pestana === "historico")}>Histórico</button>
       </div>
 
+      {/* Selector de periodo fijo */}
       {pestana === "diario" && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <button onClick={() => setFechaDia(new Date(fechaDia.getTime() - 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>‹</button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>
-            {fechaDia.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}
-          </span>
-          <button onClick={() => setFechaDia(new Date(fechaDia.getTime() + 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>›</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
+          <button onClick={() => setFechaDia(new Date(fechaDia.getTime() - 86400000))} aria-label="Día anterior" style={navBtn}><Flecha dir="izq" /></button>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{fechaDia.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}</span>
+          <button onClick={() => setFechaDia(new Date(fechaDia.getTime() + 86400000))} aria-label="Día siguiente" style={navBtn}><Flecha dir="der" /></button>
         </div>
       )}
 
       {pestana === "semanal" && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() - 7 * 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>‹</button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>
-            {semanaBase.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}
-          </span>
-          <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() + 7 * 86400000))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e4e2da", background: "#fff" }}>›</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexShrink: 0 }}>
+          <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() - 7 * 86400000))} aria-label="Semana anterior" style={navBtn}><Flecha dir="izq" /></button>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>Semana del {semanaBase.toLocaleDateString("es-PR", { day: "numeric", month: "short" })}</span>
+          <button onClick={() => setSemanaBase(new Date(semanaBase.getTime() + 7 * 86400000))} aria-label="Semana siguiente" style={navBtn}><Flecha dir="der" /></button>
         </div>
       )}
 
       {pestana === "mensual" && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <select value={mes} onChange={(e) => setMes(Number(e.target.value))} style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexShrink: 0 }}>
+          <select value={mes} onChange={(e) => setMes(Number(e.target.value))} style={selectStyle}>
             {MESES.map((m, i) => <option key={m} value={i}>{m}</option>)}
           </select>
-          <select value={anioMensual} onChange={(e) => setAnioMensual(Number(e.target.value))} style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>
+          <select value={anioMensual} onChange={(e) => setAnioMensual(Number(e.target.value))} style={selectStyle}>
             {[2024, 2025, 2026].map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
       )}
 
       {pestana === "historico" && (
-        <select value={anioHistorico} onChange={(e) => setAnioHistorico(Number(e.target.value))} style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e4e2da", background: "#fff", marginBottom: 14 }}>
+        <select value={anioHistorico} onChange={(e) => setAnioHistorico(Number(e.target.value))} style={{ ...selectStyle, width: "100%", flex: "none", marginBottom: 14, boxSizing: "border-box" }}>
           {[2025, 2026].map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
       )}
 
-      {pestana !== "historico" && (
-        <div style={{ background: "#eaf0f7", borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Total del equipo</p>
-            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{totalEquipo}</p>
+      {/* Tarjeta resumen fija */}
+      {pestana !== "historico" ? (
+        <div style={{ background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", boxShadow: "0 2px 10px rgba(16,32,53,0.05)", flexShrink: 0 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, fontWeight: 600 }}>Total del equipo</p>
+            <p style={{ fontSize: 26, fontWeight: 800, color: TEXT, margin: "4px 0 0" }}>{totalEquipo}</p>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Tu aporte</p>
-            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{tuAporte}</p>
+          <div style={{ width: 1, alignSelf: "stretch", background: LINE }} />
+          <div style={{ flex: 1, paddingLeft: 16 }}>
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, fontWeight: 600 }}>Tu aporte</p>
+            <p style={{ fontSize: 26, fontWeight: 800, color: NAVY, margin: "4px 0 0" }}>{tuAporte}</p>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", boxShadow: "0 2px 10px rgba(16,32,53,0.05)", flexShrink: 0 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, fontWeight: 600 }}>Total del equipo {anioHistorico}</p>
+            <p style={{ fontSize: 26, fontWeight: 800, color: TEXT, margin: "4px 0 0" }}>{totalHistoricoAnual}</p>
+          </div>
+          <div style={{ width: 1, alignSelf: "stretch", background: LINE }} />
+          <div style={{ flex: 1, paddingLeft: 16 }}>
+            <p style={{ fontSize: 12, color: MUTED, margin: 0, fontWeight: 600 }}>Tu aporte</p>
+            <p style={{ fontSize: 26, fontWeight: 800, color: NAVY, margin: "4px 0 0" }}>{tuAporteHistorico}</p>
           </div>
         </div>
       )}
 
-      {pestana === "historico" && (
-        <div style={{ background: "#eaf0f7", borderRadius: 14, padding: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Total del equipo {anioHistorico}</p>
-            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{totalHistoricoAnual}</p>
+      {/* Área que scrollea por dentro */}
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+        {loading ? (
+          <p style={{ fontSize: 13, color: MUTED }}>Cargando...</p>
+        ) : pestana === "diario" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {tablaData.length === 0 && <p style={{ fontSize: 13, color: MUTED }}>Sin reparaciones ese día.</p>}
+            {tablaData.map((f) => {
+              const esTu = f.nombre === tecnico;
+              const abierto = expandido === f.nombre;
+              return (
+                <div key={f.nombre} style={{ background: esTu ? TU_BG : "#fff", border: `1px solid ${esTu ? "#f3e2c4" : LINE}`, borderRadius: 14, boxShadow: "0 2px 10px rgba(16,32,53,0.05)", overflow: "hidden" }}>
+                  <button
+                    onClick={() => setExpandido(abierto ? null : f.nombre)}
+                    style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "transparent", border: "none", textAlign: "left" }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 700, color: esTu ? TU_TX : TEXT }}>
+                      {f.nombre}{esTu ? " (tú)" : ""}
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 800, color: esTu ? TU_TX : NAVY }}>
+                      {f.total}
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={esTu ? TU_TX : MUTED} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: abierto ? "rotate(180deg)" : "none", transition: "transform .2s" }}><path d="M6 9l6 6 6-6"></path></svg>
+                    </span>
+                  </button>
+                  {abierto && (
+                    <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
+                      {horasDe(f.nombre).map((h, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 8px", fontSize: 12, borderTop: `1px solid ${esTu ? "#f3e2c4" : LINE}` }}>
+                          <span style={{ color: MUTED, fontWeight: 600 }}>{h.hora}</span>
+                          <span style={{ color: TEXT }}>{h.modelo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 11, color: "#0f3d63", margin: 0, fontWeight: 600 }}>Tu aporte</p>
-            <p style={{ fontSize: 24, fontWeight: 800, color: "#0f3d63", margin: "4px 0 0" }}>{tuAporteHistorico}</p>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
-      ) : pestana === "diario" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {tablaData.length === 0 && <p style={{ fontSize: 12, color: "#999" }}>Sin reparaciones ese día.</p>}
-          {tablaData.map((f) => {
-            const esTu = f.nombre === tecnico;
-            const abierto = expandido === f.nombre;
-            return (
-              <div key={f.nombre}>
-                <button
-                  onClick={() => setExpandido(abierto ? null : f.nombre)}
-                  style={{
-                    width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "12px 14px", background: esTu ? "#fdf0dc" : "#fff", borderRadius: 10, border: "none",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 600, color: esTu ? "#93650f" : "#222" }}>
-                    {f.nombre}{esTu ? " (tú)" : ""}
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: esTu ? "#93650f" : "#0f3d63" }}>
-                    {f.total} {abierto ? "▲" : "▼"}
-                  </span>
-                </button>
-                {abierto && (
-                  <div style={{ padding: "8px 10px 4px", display: "flex", flexDirection: "column", gap: 4 }}>
-                    {horasDe(f.nombre).map((h, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", fontSize: 12 }}>
-                        <span style={{ color: "#999", fontWeight: 600 }}>{h.hora}</span>
-                        <span style={{ color: "#666" }}>{h.modelo}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : pestana === "historico" ? (
-        <>
-          <div style={{ overflowX: "auto", marginBottom: 16 }}>
-            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", minWidth: 480 }}>
+        ) : pestana === "historico" ? (
+          <>
+            <div style={{ overflowX: "auto", marginBottom: 12 }}>
+              <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden", minWidth: 480 }}>
+                <thead>
+                  <tr style={{ background: SURF }}>
+                    <td style={{ ...th, textAlign: "left", fontWeight: 700 }}>Técnico</td>
+                    {MESES_CORTOS.map((c) => (<td key={c} style={th}>{c}</td>))}
+                    <td style={{ ...th, fontWeight: 700 }}>Total</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tablaHistorico.map((f) => {
+                    const esTu = f.nombre === tecnico;
+                    const abierto = tecnicoDecision === f.nombre;
+                    return (
+                      <>
+                        <tr
+                          key={f.nombre}
+                          onClick={() => setTecnicoDecision(abierto ? null : f.nombre)}
+                          style={{ borderTop: `1px solid ${LINE}`, background: esTu ? TU_BG : "transparent", cursor: "pointer" }}
+                        >
+                          <td style={{ padding: "9px 8px", fontWeight: 700, color: esTu ? TU_TX : NAVY }}>
+                            {f.nombre}{esTu ? " (tú)" : ""}
+                          </td>
+                          {f.valores.map((v, i) => (<td key={i} style={td(esTu)}>{v}</td>))}
+                          <td style={{ ...td(esTu), fontWeight: 800, color: esTu ? TU_TX : NAVY }}>{f.total}</td>
+                        </tr>
+                        {abierto && (
+                          <tr>
+                            <td colSpan={MESES_CORTOS.length + 2} style={{ padding: "10px 14px 14px", background: SURF }}>
+                              <p style={{ fontSize: 11, color: MUTED, fontWeight: 700, letterSpacing: 0.4, margin: "0 0 8px" }}>DECISIONES {anioHistorico}</p>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {decisionesDe(f.nombre).map((d) => (
+                                  <span key={d.decision} style={{ fontSize: 11, fontWeight: 600, padding: "5px 10px", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 20, color: TEXT }}>
+                                    {d.decision} · {Number(d.pct)}%
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                  <tr style={{ borderTop: `1px solid ${LINE}`, background: "#eef4fb", fontWeight: 800 }}>
+                    <td style={{ padding: "9px 8px", color: NAVY }}>Total</td>
+                    {totalHistoricoPorMes.map((t, i) => (<td key={i} style={{ ...td(false), fontWeight: 800, color: NAVY }}>{t}</td>))}
+                    <td style={{ ...td(false), fontWeight: 800, color: NAVY }}>{totalHistoricoAnual}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 12, color: MUTED, textAlign: "center" }}>Toca un técnico para ver su desglose de decisiones</p>
+          </>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden", minWidth: columnas.length > 5 ? 480 : 320 }}>
               <thead>
-                <tr style={{ background: "#f5f4f1" }}>
-                  <td style={{ padding: "6px 10px", fontWeight: 700, color: "#666" }}>Técnico</td>
-                  {MESES_CORTOS.map((c) => (
-                    <td key={c} style={{ padding: "6px 6px", textAlign: "center", color: "#666" }}>{c}</td>
-                  ))}
-                  <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#666" }}>Total</td>
+                <tr style={{ background: SURF }}>
+                  <td style={{ ...th, textAlign: "left", fontWeight: 700, fontSize: 12 }}>Técnico</td>
+                  {columnas.map((c) => (<td key={c} style={{ ...th, fontSize: 12 }}>{c}</td>))}
+                  <td style={{ ...th, fontWeight: 700, fontSize: 12 }}>Total</td>
                 </tr>
               </thead>
               <tbody>
-                {tablaHistorico.map((f) => {
+                {tablaData.map((f) => {
                   const esTu = f.nombre === tecnico;
-                  const abierto = tecnicoDecision === f.nombre;
                   return (
-                    <>
-                      <tr
-                        key={f.nombre}
-                        onClick={() => setTecnicoDecision(abierto ? null : f.nombre)}
-                        style={{ borderTop: "1px solid #f0efec", background: esTu ? "#fdf0dc" : "transparent", cursor: "pointer" }}
-                      >
-                        <td style={{ padding: "7px 10px", fontWeight: 600, color: esTu ? "#93650f" : "#0f3d63" }}>
-                          {f.nombre}{esTu ? " (tú)" : ""}
-                        </td>
-                        {f.valores.map((v, i) => (
-                          <td key={i} style={{ textAlign: "center", color: esTu ? "#93650f" : "#222" }}>{v}</td>
-                        ))}
-                        <td style={{ textAlign: "center", fontWeight: 700, color: esTu ? "#93650f" : "#0f3d63" }}>{f.total}</td>
-                      </tr>
-                      {abierto && (
-                        <tr>
-                          <td colSpan={MESES_CORTOS.length + 2} style={{ padding: "8px 14px 12px", background: "#f9f8f5" }}>
-                            <p style={{ fontSize: 11, color: "#999", fontWeight: 700, margin: "0 0 6px" }}>DECISIONES {anioHistorico}</p>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              {decisionesDe(f.nombre).map((d) => (
-                                <span key={d.decision} style={{ fontSize: 11, padding: "4px 8px", background: "#fff", borderRadius: 8 }}>
-                                  {d.decision} · {Number(d.pct)}%
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
+                    <tr key={f.nombre} style={{ borderTop: `1px solid ${LINE}`, background: esTu ? TU_BG : "transparent" }}>
+                      <td style={{ padding: "9px 8px", fontWeight: 700, color: esTu ? TU_TX : NAVY }}>
+                        {f.nombre}{esTu ? " (tú)" : ""}
+                      </td>
+                      {f.valores.map((v, i) => (<td key={i} style={td(esTu)}>{v}</td>))}
+                      <td style={{ ...td(esTu), fontWeight: 800, color: esTu ? TU_TX : NAVY }}>{f.total}</td>
+                    </tr>
                   );
                 })}
-                <tr style={{ borderTop: "1px solid #f0efec", background: "#eaf0f7", fontWeight: 700 }}>
-                  <td style={{ padding: "7px 10px", color: "#0f3d63" }}>Total</td>
-                  {totalHistoricoPorMes.map((t, i) => (
-                    <td key={i} style={{ textAlign: "center", color: "#0f3d63" }}>{t}</td>
-                  ))}
-                  <td style={{ textAlign: "center", color: "#0f3d63" }}>{totalHistoricoAnual}</td>
+                <tr style={{ borderTop: `1px solid ${LINE}`, background: "#eef4fb", fontWeight: 800 }}>
+                  <td style={{ padding: "9px 8px", color: NAVY }}>Total</td>
+                  {totalesPorColumna.map((t, i) => (<td key={i} style={{ ...td(false), fontWeight: 800, color: NAVY }}>{t}</td>))}
+                  <td style={{ ...td(false), fontWeight: 800, color: NAVY }}>{totalEquipo}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p style={{ fontSize: 11, color: "#999", textAlign: "center" }}>Toca un técnico para ver su desglose de decisiones</p>
-        </>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", minWidth: columnas.length > 5 ? 480 : 320 }}>
-            <thead>
-              <tr style={{ background: "#f5f4f1" }}>
-                <td style={{ padding: "7px 10px", fontWeight: 700, color: "#666" }}>Técnico</td>
-                {columnas.map((c) => (
-                  <td key={c} style={{ padding: "7px 8px", textAlign: "center", color: "#666" }}>{c}</td>
-                ))}
-                <td style={{ padding: "7px 10px", textAlign: "center", fontWeight: 700, color: "#666" }}>Total</td>
-              </tr>
-            </thead>
-            <tbody>
-              {tablaData.map((f) => {
-                const esTu = f.nombre === tecnico;
-                return (
-                  <tr key={f.nombre} style={{ borderTop: "1px solid #f0efec", background: esTu ? "#fdf0dc" : "transparent" }}>
-                    <td style={{ padding: "7px 10px", fontWeight: 600, color: esTu ? "#93650f" : "#0f3d63" }}>
-                      {f.nombre}{esTu ? " (tú)" : ""}
-                    </td>
-                    {f.valores.map((v, i) => (
-                      <td key={i} style={{ textAlign: "center", color: esTu ? "#93650f" : "#222" }}>{v}</td>
-                    ))}
-                    <td style={{ textAlign: "center", fontWeight: 700, color: esTu ? "#93650f" : "#0f3d63" }}>{f.total}</td>
-                  </tr>
-                );
-              })}
-              <tr style={{ borderTop: "1px solid #f0efec", background: "#eaf0f7", fontWeight: 700 }}>
-                <td style={{ padding: "7px 10px", color: "#0f3d63" }}>Total</td>
-                {totalesPorColumna.map((t, i) => (
-                  <td key={i} style={{ textAlign: "center", color: "#0f3d63" }}>{t}</td>
-                ))}
-                <td style={{ textAlign: "center", color: "#0f3d63" }}>{totalEquipo}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
