@@ -2,14 +2,28 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Reparación" />
     <link rel="manifest" href="/manifest.json" />
     <title>Marey Reparación</title>
     <style>
       html, body, #root { height: 100%; margin: 0; }
-      body { font-family: -apple-system, system-ui, sans-serif; background: #f4f3ee; }
+      /* Sin rebote de iOS y sin scroll de toda la página; cada pantalla maneja su propio scroll interno */
+      html, body {
+        overscroll-behavior: none;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        font-family: -apple-system, system-ui, sans-serif;
+        background: #f4f3ee;
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+      }
+      /* #root es el único contenedor con scroll: las pantallas de acción quedan fijas,
+         y las de mucho contenido (estadísticas, reportes) scrollean aquí sin rebote */
+      #root { height: 100dvh; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
       button { cursor: pointer; }
       select, input { font-family: inherit; }
     </style>
