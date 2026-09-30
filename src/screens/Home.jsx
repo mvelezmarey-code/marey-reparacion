@@ -4,7 +4,8 @@ import { supabase } from "../lib/supabase";
 const NAVY = "#0f3d63";
 const TEXT = "#10151c";
 const MUTED = "#6b7685";
-const LINE = "#e6e8ec";
+const LINE = "#edf0f4";
+const SURF = "#f7f9fc";
 
 export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onVerReparaciones, onVerAsistente, onSalir }) {
   const [batches, setBatches] = useState([]);
@@ -63,128 +64,109 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
     color: TEXT,
     WebkitFontSmoothing: "antialiased",
   };
-  const num = {
-    width: 30, height: 30, borderRadius: 15, background: NAVY, color: "#fff",
-    fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  const num = (claro) => ({
+    width: 34, height: 34, borderRadius: 17,
+    background: claro ? "rgba(255,255,255,0.18)" : NAVY,
+    color: "#fff", fontSize: 15, fontWeight: 700,
+    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  });
+  const tarjeta = {
+    background: "#fff", border: `1px solid ${LINE}`, borderRadius: 18, padding: 18,
+    boxShadow: "0 2px 10px rgba(16,32,53,0.05)", display: "flex", alignItems: "center", gap: 16,
+    textAlign: "left", width: "100%", cursor: "pointer",
   };
-  const cardBase = {
-    flex: 1, background: "#fff", border: `1px solid ${LINE}`, borderRadius: 18, padding: 18,
-    boxShadow: "0 2px 8px rgba(16,32,53,0.05)", textAlign: "left", cursor: "pointer",
+  const tile = {
+    flex: 1, background: SURF, border: "none", borderRadius: 16, padding: 16,
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer",
   };
-  const accion = {
-    display: "flex", alignItems: "center", gap: 12, background: "#fff",
-    border: `1px solid ${LINE}`, borderRadius: 14, padding: "15px 16px", cursor: "pointer",
-    boxShadow: "0 1px 3px rgba(16,32,53,0.04)", width: "100%", textAlign: "left",
-  };
-
-  function Conector() {
-    return <div style={{ flex: 1, width: 2, background: LINE, margin: "6px 0", minHeight: 12 }} />;
-  }
 
   return (
     <div style={shellStyle}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: MUTED }}>Hola,</p>
-          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 700, letterSpacing: -0.3 }}>{tecnico}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 22, background: NAVY, color: "#fff", fontSize: 17, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{inicial}</div>
+          <div>
+            <p style={{ margin: 0, fontSize: 12, color: MUTED }}>Técnico</p>
+            <p style={{ margin: "1px 0 0", fontSize: 17, fontWeight: 700 }}>{tecnico}</p>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={cargarBatches} aria-label="Actualizar" style={{ width: 40, height: 40, borderRadius: 20, background: "#fff", border: `1px solid ${LINE}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={cargarBatches} aria-label="Actualizar" style={{ width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: loading ? "rotate(180deg)" : "none", transition: "transform .4s ease" }}><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
           </button>
-          <button onClick={onSalir} style={{ fontSize: 12, fontWeight: 600, padding: "9px 15px", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 20, color: MUTED }}>Cambiar</button>
+          <button onClick={onSalir} style={{ fontSize: 12, fontWeight: 600, padding: "9px 15px", background: SURF, border: "none", borderRadius: 20, color: MUTED }}>Cambiar</button>
         </div>
       </div>
 
-      {/* Timeline 1-2-3 */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, minHeight: 0, overflowY: "auto" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, minHeight: 0, overflowY: "auto" }}>
         {/* Paso 1 */}
-        <div style={{ display: "flex", gap: 14 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={num}>1</div>
-            <Conector />
+        <button onClick={onNuevoBatch} style={tarjeta}>
+          <div style={num(false)}>1</div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nueva transferencia</p>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: MUTED }}>Recibir mercancía para reparar</p>
           </div>
-          <button onClick={onNuevoBatch} style={{ ...cardBase, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nueva transferencia</p>
-              <p style={{ margin: "5px 0 0", fontSize: 13, color: MUTED }}>Recibir mercancía para reparar</p>
-            </div>
-            <span style={{ color: "#c4cbd4", fontSize: 22 }}>›</span>
-          </button>
-        </div>
+          <span style={{ color: "#c4cbd4", fontSize: 22 }}>›</span>
+        </button>
 
         {/* Paso 2 */}
-        <div style={{ display: "flex", gap: 14, flex: 1, minHeight: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={num}>2</div>
-            <Conector />
+        {loading ? (
+          <div style={{ ...tarjeta, cursor: "default", color: MUTED, fontSize: 13 }}>Cargando...</div>
+        ) : batchesActivos.length === 0 ? (
+          <div style={{ background: SURF, borderRadius: 18, padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={num(false)}>2</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Reparación en progreso</p>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: MUTED }}>No tienes batches activos</p>
+            </div>
           </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-            <p style={{ margin: "4px 0 10px", fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.4, textTransform: "uppercase" }}>Reparación en progreso</p>
-            {loading ? (
-              <p style={{ fontSize: 13, color: MUTED }}>Cargando...</p>
-            ) : batchesActivos.length === 0 ? (
-              <div style={{ background: "#f7f9fc", borderRadius: 16, padding: 18 }}>
-                <p style={{ margin: 0, fontSize: 13, color: MUTED }}>No tienes batches activos</p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", minHeight: 0 }}>
-                {batchesActivos.map((b) => {
-                  const p = progreso[b.id] || { hechas: 0, total: 0 };
-                  const pct = p.total > 0 ? Math.round((p.hechas / p.total) * 100) : 0;
-                  return (
-                    <button key={b.id} onClick={() => onOpenBatch(b)} style={{ background: "#eef4fb", border: `1.5px solid ${NAVY}`, borderRadius: 18, padding: 18, textAlign: "left", cursor: "pointer" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: NAVY }}>Transferencia #{b.numero_transferencia}</p>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: NAVY, background: "#fff", borderRadius: 20, padding: "4px 10px" }}>En proceso</span>
-                      </div>
-                      <p style={{ margin: "8px 0 12px", fontSize: 13, color: "#3a6b96" }}>
-                        {p.total > 0 ? `${p.hechas} de ${p.total} unidades reparadas` : "Toca para reparar unidades"}
-                      </p>
-                      <div style={{ height: 6, background: "#d7e3f2", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", background: NAVY, borderRadius: 3 }} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        ) : (
+          batchesActivos.map((b, i) => {
+            const p = progreso[b.id] || { hechas: 0, total: 0 };
+            const pct = p.total > 0 ? Math.round((p.hechas / p.total) * 100) : 0;
+            return (
+              <button key={b.id} onClick={() => onOpenBatch(b)} style={{ background: NAVY, border: "none", borderRadius: 18, padding: 20, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", color: "#fff", textAlign: "left", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                  <div style={num(true)}>{i === 0 ? "2" : "•"}</div>
+                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.85 }}>Reparación en progreso</span>
+                </div>
+                <p style={{ margin: 0, fontSize: 23, fontWeight: 700 }}>Transferencia #{b.numero_transferencia}</p>
+                <p style={{ margin: "8px 0 16px", fontSize: 14, opacity: 0.85 }}>
+                  {p.total > 0 ? `${p.hechas} de ${p.total} unidades reparadas` : "Toca para reparar unidades"}
+                </p>
+                <div style={{ height: 6, background: "rgba(255,255,255,0.2)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: "#fff", borderRadius: 3 }} />
+                </div>
+              </button>
+            );
+          })
+        )}
 
         {/* Paso 3 */}
-        <div style={{ display: "flex", gap: 14 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={num}>3</div>
+        <button onClick={onVerHistorial} style={tarjeta}>
+          <div style={num(false)}>3</div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Historial de arreglados</p>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: MUTED }}>Completados y en revisión</p>
           </div>
-          <button onClick={onVerHistorial} style={{ ...cardBase, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Historial de arreglados</p>
-              <p style={{ margin: "5px 0 0", fontSize: 13, color: MUTED }}>Batches completados y en revisión</p>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: NAVY, background: "#eef4fb", borderRadius: 20, padding: "5px 12px" }}>{historialCount}</span>
-          </button>
-        </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: NAVY, background: "#eef4fb", borderRadius: 20, padding: "5px 12px" }}>{historialCount}</span>
+        </button>
       </div>
 
-      {/* Accesos */}
-      <div style={{ height: 1, background: LINE, margin: "20px 0 16px" }} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={onVerReparaciones} style={accion}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
-          <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>Reparaciones del equipo</span>
-          <span style={{ color: "#c4cbd4", fontSize: 20 }}>›</span>
+      {/* Accesos rápidos */}
+      <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
+        <button onClick={onVerReparaciones} style={tile}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+          <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Reparaciones del equipo</span>
         </button>
-        <button onClick={onVerEstadisticas} style={accion}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg>
-          <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>Estadísticas completas</span>
-          <span style={{ color: "#c4cbd4", fontSize: 20 }}>›</span>
+        <button onClick={onVerEstadisticas} style={tile}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg>
+          <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Estadísticas completas</span>
         </button>
-        <button onClick={onVerAsistente} style={accion}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
-          <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>Videos y guías de reparación</span>
-          <span style={{ color: "#c4cbd4", fontSize: 20 }}>›</span>
+        <button onClick={onVerAsistente} style={tile}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
+          <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Videos y guías</span>
         </button>
       </div>
     </div>
