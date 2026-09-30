@@ -192,34 +192,54 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
     setMensajes((prev) => [...prev, { role: "assistant", content: respuestaTexto, fotoPieza }]);
   }
 
+  // Paleta premium: navy Marey sobre blanco, hairlines suaves, sombras sutiles
+  const NAVY = "#0f3d63";
+  const TEXT = "#10151c";
+  const MUTED = "#6b7685";
+  const LINE = "#edf0f4";
+  const SURF = "#f7f9fc";
   const shellStyle = {
-    height: "100vh",
-    maxWidth: 420,
+    height: "100dvh",
+    maxHeight: "100dvh",
+    maxWidth: 480,
     margin: "0 auto",
-    padding: 20,
+    padding: "16px 20px calc(16px + env(safe-area-inset-bottom))",
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
     background: "#fff",
+    color: TEXT,
+    overflow: "hidden",
+    WebkitFontSmoothing: "antialiased",
   };
   const botonPrimario = {
     width: "100%", padding: 16, fontSize: 15, fontWeight: 600,
-    background: "#0f3d63", color: "#fff", border: "none", borderRadius: 14,
-    letterSpacing: 0.2,
+    background: NAVY, color: "#fff", border: "none", borderRadius: 16,
+    letterSpacing: 0.2, cursor: "pointer", boxShadow: "0 6px 16px rgba(15,61,99,0.18)",
   };
   const botonSecundario = {
-    width: "100%", padding: 14, fontSize: 14, fontWeight: 600,
-    background: "#f4f3ee", color: "#333", border: "none", borderRadius: 14,
+    width: "100%", padding: 15, fontSize: 14, fontWeight: 600,
+    background: "#fff", color: NAVY, border: "1px solid #dfe4ea", borderRadius: 16,
+    cursor: "pointer",
   };
   const chip = (activo) => ({
-    padding: "12px 16px", borderRadius: 12, fontSize: 14, fontWeight: 500, textAlign: "left",
-    border: activo ? "1.5px solid #0f3d63" : "1px solid #e4e2da",
-    background: activo ? "#eaf0f7" : "#fff",
-    color: activo ? "#0f3d63" : "#333",
+    padding: "15px 16px", borderRadius: 16, fontSize: 14, fontWeight: 500, textAlign: "left",
+    border: activo ? `1.5px solid ${NAVY}` : `1px solid ${LINE}`,
+    background: activo ? "#eef4fb" : "#fff",
+    color: activo ? NAVY : TEXT,
+    cursor: "pointer",
+    boxShadow: activo ? "none" : "0 1px 3px rgba(16,32,53,0.05)",
+    transition: "all .15s ease",
   });
   const inputStyle = {
-    flex: 1, padding: 12, border: "1px solid #e4e2da", borderRadius: 10, boxSizing: "border-box", fontSize: 14,
+    flex: 1, padding: "13px 14px", border: `1px solid ${LINE}`, borderRadius: 14, boxSizing: "border-box", fontSize: 16, background: SURF, color: TEXT, outline: "none",
   };
+  const badge = (activo) => ({
+    width: 26, height: 26, borderRadius: 13, background: activo ? NAVY : "#eef2f7",
+    color: activo ? "#fff" : NAVY, fontSize: 13, fontWeight: 700,
+    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  });
+  const labelChip = { fontSize: 11, color: MUTED, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 10px" };
 
   const encabezado = ["AYUDA", modelo || null, serialInicial ? `SN ${serialInicial}` : null]
     .filter(Boolean)
@@ -232,16 +252,18 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
 
   return (
     <div style={shellStyle}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-        <button onClick={anterior} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>←</button>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <button onClick={anterior} aria-label="Atrás" style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${LINE}`, background: "#fff", color: NAVY, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 12, color: "#999", fontWeight: 600 }}>{encabezado}</p>
+          <p style={{ margin: 0, fontSize: 11, color: MUTED, fontWeight: 700, letterSpacing: 0.5 }}>{encabezado}</p>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
         {Array.from({ length: TOTAL_PASOS }, (_, i) => i + 1).map((n) => (
-          <div key={n} style={{ flex: 1, height: 4, borderRadius: 4, background: n <= paso ? "#0f3d63" : "#e4e2da" }} />
+          <div key={n} style={{ flex: 1, height: 4, borderRadius: 4, background: n <= paso ? NAVY : LINE }} />
         ))}
       </div>
 
@@ -266,7 +288,7 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
         )}
 
         {/* PASO: problema */}
-        {modelo && !problemaActivo && (
+        {modelo && !problemaActivo && !modoOtro && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>¿Qué le pasa al calentador?</p>
             <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>
@@ -279,19 +301,19 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {problemas.map((p, i) => (
-                  <button key={p.id} onClick={() => setProblemaActivo(p)} style={{ ...chip(false), display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <span style={{ width: 24, height: 24, borderRadius: 12, background: "#0f3d63", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <button key={p.id} onClick={() => setProblemaActivo(p)} style={{ ...chip(false), display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={badge(true)}>{i + 1}</span>
                     <span style={{ flex: 1 }}>
-                      <span style={{ display: "block" }}>{p.titulo}</span>
-                      <span style={{ display: "block", fontSize: 12, color: "#999", marginTop: 2 }}>{p.pieza}</span>
+                      <span style={{ display: "block", lineHeight: 1.3 }}>{p.titulo}</span>
+                      <span style={{ display: "block", fontSize: 12, color: MUTED, marginTop: 2 }}>{p.pieza}</span>
                     </span>
                   </button>
                 ))}
-                <button onClick={() => setModoOtro(true)} style={{ ...chip(false), display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <span style={{ width: 24, height: 24, borderRadius: 12, background: "#f4f3ee", color: "#0f3d63", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>?</span>
+                <button onClick={() => setModoOtro(true)} style={{ ...chip(false), display: "flex", alignItems: "center", gap: 12, border: `1px dashed #c8cfd8`, background: SURF, boxShadow: "none" }}>
+                  <span style={badge(false)}>?</span>
                   <span style={{ flex: 1 }}>
-                    <span style={{ display: "block" }}>Otro / no está en la lista</span>
-                    <span style={{ display: "block", fontSize: 12, color: "#999", marginTop: 2 }}>Pregúntale al asistente</span>
+                    <span style={{ display: "block", lineHeight: 1.3 }}>Otro / no está en la lista</span>
+                    <span style={{ display: "block", fontSize: 12, color: MUTED, marginTop: 2 }}>Pregúntale al asistente</span>
                   </span>
                 </button>
               </div>
