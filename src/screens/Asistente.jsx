@@ -20,14 +20,16 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
   const [pensando, setPensando] = useState(false);
   const [errorChat, setErrorChat] = useState("");
   const [mostrarGuia, setMostrarGuia] = useState(false);
+  const [modoOtro, setModoOtro] = useState(false); // chat libre, sin problema específico
   const inputFotoRef = useRef(null);
   const finChatRef = useRef(null);
 
   const vieneConModelo = Boolean(modeloInicial);
   const TOTAL_PASOS = vieneConModelo ? 2 : 3;
 
+  const enSolucion = problemaActivo || modoOtro;
   let paso;
-  if (problemaActivo) paso = TOTAL_PASOS;
+  if (enSolucion) paso = TOTAL_PASOS;
   else if (modelo) paso = TOTAL_PASOS - 1;
   else paso = 1;
 
@@ -45,7 +47,7 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
     setFotoPendiente(null);
     setErrorChat("");
     setMostrarGuia(false);
-  }, [problemaActivo]);
+  }, [problemaActivo, modoOtro]);
 
   useEffect(() => {
     finChatRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,8 +92,9 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
   }
 
   function anterior() {
-    if (problemaActivo) {
+    if (problemaActivo || modoOtro) {
       setProblemaActivo(null);
+      setModoOtro(false);
       return;
     }
     if (modelo && !vieneConModelo) {
@@ -275,18 +278,35 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
               <p style={{ fontSize: 13, color: "#999" }}>Todavía no hay videos para este modelo.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {problemas.map((p) => (
-                  <button key={p.id} onClick={() => setProblemaActivo(p)} style={chip(false)}>
-                    <span style={{ display: "block" }}>{p.titulo}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "#999", marginTop: 2 }}>{p.pieza}</span>
+                {problemas.map((p, i) => (
+                  <button key={p.id} onClick={() => setProblemaActivo(p)} style={{ ...chip(false), display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: "#0f3d63", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ display: "block" }}>{p.titulo}</span>
+                      <span style={{ display: "block", fontSize: 12, color: "#999", marginTop: 2 }}>{p.pieza}</span>
+                    </span>
                   </button>
                 ))}
+                <button onClick={() => setModoOtro(true)} style={{ ...chip(false), display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: 12, background: "#f4f3ee", color: "#0f3d63", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>?</span>
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: "block" }}>Otro / no está en la lista</span>
+                    <span style={{ display: "block", fontSize: 12, color: "#999", marginTop: 2 }}>Pregúntale al asistente</span>
+                  </span>
+                </button>
               </div>
             )}
           </>
         )}
 
-        {/* PASO: solución */}
+        {/* PASO: solución (problema específico) o chat libre (Otro) */}
+        {modoOtro && !problemaActivo && (
+          <>
+            <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>Cuéntame qué tiene el calentador</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 20px" }}>Descríbelo o sube una foto y el asistente te ayuda ({modelo}).</p>
+          </>
+        )}
+
         {problemaActivo && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>{problemaActivo.titulo}</p>
@@ -356,10 +376,15 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
               </>
             )}
 
+          </>
+        )}
+
+        {enSolucion && (
+          <>
             {/* CHAT CON EL AI */}
             <p style={{ fontSize: 12, color: "#999", fontWeight: 600, margin: "0 0 8px" }}>PREGÚNTALE AL ASISTENTE</p>
 
-            {mensajes.length === 0 && !pensando && (
+            {problemaActivo && mensajes.length === 0 && !pensando && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
                 <button onClick={() => enviar("Explícame los pasos para hacer esta reparación.")} style={chip(false)}>
                   Explícame los pasos
@@ -443,9 +468,9 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
         )}
       </div>
 
-      {problemaActivo ? (
+      {enSolucion ? (
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <button onClick={() => setProblemaActivo(null)} style={{ ...botonSecundario, flex: 1 }}>Otro problema</button>
+          <button onClick={() => { setProblemaActivo(null); setModoOtro(false); }} style={{ ...botonSecundario, flex: 1 }}>Otro problema</button>
           <button onClick={onBack} style={{ ...botonPrimario, flex: 1 }}>{vieneConModelo ? "Volver a reparar" : "Listo"}</button>
         </div>
       ) : null}
