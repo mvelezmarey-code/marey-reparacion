@@ -22,8 +22,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [escaneando, setEscaneando] = useState(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
-  const [avisoModelo, setAvisoModelo] = useState("");
-  const [notaModelo, setNotaModelo] = useState(""); // se guarda en la unidad si hubo discrepancia
   const [startedAt] = useState(() => new Date().toISOString());
 
   useEffect(() => {
@@ -135,7 +133,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       tecnico_nombre: tecnico,
       piezas_danadas: piezas,
       decision,
-      nota: notaModelo || null,
       started_at: startedAt,
     });
     setGuardando(false);
@@ -180,27 +177,10 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return (
       <ScannerModal
         onClose={() => setEscaneando(null)}
-        onScan={({ serial, modelo: modeloLeido }) => {
+        onScan={(serial) => {
           const limpio = limpiarSerial(serial);
           if (escaneando === "old") setOldSn(limpio);
           if (escaneando === "new") setNewSn(limpio);
-
-          // La etiqueta también trae el modelo: lo cruzamos con el batch.
-          if (escaneando === "old") {
-            setAvisoModelo("");
-            setNotaModelo("");
-            if (modeloLeido) {
-              const disponible = modelosDisponibles.some((m) => m.modelo_codigo === modeloLeido);
-              if (disponible && modeloLeido !== modelo) {
-                setAvisoModelo(`La etiqueta dice ${modeloLeido}. Cambié el modelo por ese.`);
-                setNotaModelo(`Etiqueta: ${modeloLeido} · seleccionado antes: ${modelo}`);
-                setModelo(modeloLeido);
-              } else if (!disponible) {
-                setAvisoModelo(`Ojo: la etiqueta dice ${modeloLeido}, pero ese modelo no está pendiente en este batch. Verifica antes de seguir.`);
-                setNotaModelo(`Etiqueta: ${modeloLeido} (no estaba en el batch) · seleccionado: ${modelo}`);
-              }
-            }
-          }
           setEscaneando(null);
         }}
       />
@@ -229,8 +209,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             <Fila label="Serial" valor={oldSnNa ? "Sin serial" : oldSn} />
             <Fila label="Piezas" valor={piezas.join(", ")} />
             <Fila label="Decisión" valor={decision} />
-            {requiereNewSn && <Fila label="Nuevo SN" valor={newSn} />}
-            {notaModelo && <Fila label="Nota" valor={notaModelo} ultimo />}
+            {requiereNewSn && <Fila label="Nuevo SN" valor={newSn} ultimo />}
           </div>
           {error && <p style={{ fontSize: 13, color: "#a32d2d", marginBottom: 16, textAlign: "center" }}>{error}</p>}
           <div style={{ display: "flex", gap: 10 }}>
@@ -275,7 +254,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
             <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Solo modelos pendientes de este batch</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {modelosDisponibles.map((m) => (
-                <button key={m.modelo_codigo} onClick={() => { setModelo(m.modelo_codigo); setAvisoModelo(""); setNotaModelo(""); }} style={chip(modelo === m.modelo_codigo, false)}>
+                <button key={m.modelo_codigo} onClick={() => setModelo(m.modelo_codigo)} style={chip(modelo === m.modelo_codigo, false)}>
                   {m.modelo_codigo}
                 </button>
               ))}
@@ -311,15 +290,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
               <input type="checkbox" checked={oldSnNa} onChange={(e) => { setOldSnNa(e.target.checked); setOldSn(""); }} />
               No tiene número de serie
             </label>
-            {avisoModelo && (
-              <p style={{
-                fontSize: 13, marginTop: 14, padding: "10px 12px", borderRadius: 10, lineHeight: 1.4,
-                background: avisoModelo.startsWith("Ojo") ? "#fdeaea" : "#eaf0f7",
-                color: avisoModelo.startsWith("Ojo") ? "#a32d2d" : "#0f3d63",
-              }}>
-                {avisoModelo}
-              </p>
-            )}
           </>
         )}
 
