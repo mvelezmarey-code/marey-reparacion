@@ -162,6 +162,7 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
         problema: problemaActivo?.titulo || "",
         pieza: problemaActivo?.pieza || "",
         guia_texto: guiaTexto,
+        piezas: problemas.map((p, i) => ({ n: i + 1, pieza: p.pieza })),
         mensajes: historial.map((m) => ({ role: m.role, content: m.content })),
         imagen: foto?.base64 || null,
         tipo: foto?.tipo || null,
@@ -174,7 +175,18 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
       setErrorChat("No pude responder ahora. Intenta de nuevo.");
       return;
     }
-    setMensajes((prev) => [...prev, { role: "assistant", content: data.respuesta }]);
+
+    // Si el AI pidió mostrar una pieza ([FOTO:N]), sacamos ese marcador del texto
+    // y adjuntamos la imagen de esa pieza.
+    let respuestaTexto = data.respuesta;
+    let fotoPieza = null;
+    const marca = respuestaTexto.match(/\[FOTO:\s*(\d+)\]/i);
+    if (marca) {
+      const idx = parseInt(marca[1], 10) - 1;
+      if (problemas[idx]?.imagen_url) fotoPieza = problemas[idx].imagen_url;
+      respuestaTexto = respuestaTexto.replace(marca[0], "").trim();
+    }
+    setMensajes((prev) => [...prev, { role: "assistant", content: respuestaTexto, fotoPieza }]);
   }
 
   const shellStyle = {
@@ -378,6 +390,9 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
                     <img src={m.foto} alt="Foto enviada" style={{ display: "block", width: "100%", borderRadius: 10, marginBottom: 8 }} />
                   )}
                   {m.content}
+                  {m.fotoPieza && (
+                    <img src={m.fotoPieza} alt="Foto de la pieza" style={{ display: "block", width: "100%", borderRadius: 10, marginTop: 8, background: "#fff" }} />
+                  )}
                 </div>
               ))}
               {pensando && (
@@ -411,17 +426,17 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
               <button
                 onClick={() => inputFotoRef.current?.click()}
                 aria-label="Tomar foto"
-                style={{ width: 44, height: 44, background: "#f4f3ee", border: "none", borderRadius: 10, fontSize: 18, flexShrink: 0 }}
+                style={{ width: 44, height: 44, background: "#f4f3ee", border: "none", borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                📷
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
               </button>
               <button
                 onClick={() => enviar()}
                 disabled={pensando}
                 aria-label="Enviar"
-                style={{ width: 44, height: 44, background: "#0f3d63", color: "#fff", border: "none", borderRadius: 10, fontSize: 18, flexShrink: 0 }}
+                style={{ width: 44, height: 44, background: "#0f3d63", color: "#fff", border: "none", borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                →
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
               </button>
             </div>
           </>
