@@ -24,7 +24,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
   const historialCount = batches.filter((b) => b.estado === "pendiente_revision" || b.estado === "cerrado").length;
 
   const shellStyle = {
-    height: "100vh",
+    height: "100dvh",
     maxWidth: 420,
     margin: "0 auto",
     padding: 20,
