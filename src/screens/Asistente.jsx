@@ -199,8 +199,11 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
   const LINE = "#edf0f4";
   const SURF = "#f7f9fc";
   const shellStyle = {
-    height: "100dvh",
-    maxHeight: "100dvh",
+    position: "fixed",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     maxWidth: 480,
     margin: "0 auto",
     padding: "16px 20px calc(16px + env(safe-area-inset-bottom))",
@@ -210,6 +213,7 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
     background: "#fff",
     color: TEXT,
     overflow: "hidden",
+    overscrollBehavior: "none",
     WebkitFontSmoothing: "antialiased",
   };
   const botonPrimario = {
@@ -267,7 +271,7 @@ export default function Asistente({ modeloInicial = "", serialInicial = "", onBa
         ))}
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
         {/* PASO: modelo */}
         {!modelo && (
           <>
