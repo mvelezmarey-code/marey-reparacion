@@ -61,7 +61,7 @@ export default function ScannerModal({ onClose, onScan }) {
         return;
       }
       if (data?.serial && data.serial.length === 11) {
-        onScan({ serial: data.serial, modelo: data.modelo || "" });
+        onScan(data.serial); // devuelve solo el número de serie (string)
         return; // el formulario cierra el modal y rellena el campo
       }
       setEstado("error");
