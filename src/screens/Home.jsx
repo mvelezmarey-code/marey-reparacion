@@ -20,7 +20,7 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
     setLoading(true);
     const { data } = await supabase
       .from("batches")
-      .select("id, numero_transferencia, estado, created_at")
+      .select("id, numero_transferencia, estado, created_at, revisado_at, nota_revision")
       .order("created_at", { ascending: false })
       .limit(50);
     const lista = data || [];
@@ -125,6 +125,34 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
           batchesActivos.map((b, i) => {
             const p = progreso[b.id] || { hechas: 0, total: 0 };
             const pct = p.total > 0 ? Math.round((p.hechas / p.total) * 100) : 0;
+            const devuelto = b.revisado_at && (b.estado === "abierto" || b.estado === "recibido");
+
+            if (devuelto) {
+              return (
+                <button key={b.id} onClick={() => onOpenBatch(b)} style={{ background: "#fff8ef", border: "1px solid #f0c67a", borderRadius: 18, padding: 20, boxShadow: "0 6px 18px rgba(176,120,15,0.14)", textAlign: "left", cursor: "pointer", color: TEXT }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 17, background: "#f0b429", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3a2a00" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 5 5v2"></path></svg>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#93650f" }}>Devuelto por revisión</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 23, fontWeight: 700 }}>Transferencia #{b.numero_transferencia}</p>
+                  {b.nota_revision ? (
+                    <div style={{ marginTop: 12, background: "#fff", border: "1px solid #f3e2c4", borderRadius: 12, padding: "12px 14px" }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#93650f", textTransform: "uppercase", letterSpacing: 0.4 }}>Nota del supervisor</p>
+                      <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45 }}>{b.nota_revision}</p>
+                    </div>
+                  ) : (
+                    <p style={{ margin: "8px 0 0", fontSize: 14, color: "#93650f" }}>Toca para corregir y reenviar a revisión</p>
+                  )}
+                  <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: "#93650f" }}>
+                    Abrir y corregir
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93650f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+                  </div>
+                </button>
+              );
+            }
+
             return (
               <button key={b.id} onClick={() => onOpenBatch(b)} style={{ background: NAVY, border: "none", borderRadius: 18, padding: 20, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", color: "#fff", textAlign: "left", cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
