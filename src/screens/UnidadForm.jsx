@@ -55,8 +55,16 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     });
   }
 
+  // Tolerante: nunca revienta aunque le llegue algo que no sea string
   function limpiarSerial(valor) {
-    return valor.replace(/\D/g, "").slice(0, LARGO_SERIAL);
+    return String(valor ?? "").replace(/\D/g, "").slice(0, LARGO_SERIAL);
+  }
+
+  // Acepta tanto un string ("250840...") como un objeto { serial, modelo }
+  function tomarSerial(resultado) {
+    if (typeof resultado === "string") return resultado;
+    if (resultado && typeof resultado === "object") return resultado.serial || "";
+    return "";
   }
 
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
@@ -177,8 +185,8 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return (
       <ScannerModal
         onClose={() => setEscaneando(null)}
-        onScan={(serial) => {
-          const limpio = limpiarSerial(serial);
+        onScan={(resultado) => {
+          const limpio = limpiarSerial(tomarSerial(resultado));
           if (escaneando === "old") setOldSn(limpio);
           if (escaneando === "new") setNewSn(limpio);
           setEscaneando(null);
