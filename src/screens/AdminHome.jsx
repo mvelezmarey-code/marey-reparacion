@@ -9,6 +9,7 @@ const SURF = "#f7f9fc";
 
 export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onVerPiezas, onSalir }) {
   const [pendientes, setPendientes] = useState(null);
+  const [refrescando, setRefrescando] = useState(false);
   const inicial = (tecnico || "?").trim().charAt(0).toUpperCase();
 
   useEffect(() => {
@@ -16,11 +17,13 @@ export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, o
   }, []);
 
   async function cargarPendientes() {
+    setRefrescando(true);
     const { count } = await supabase
       .from("batches")
       .select("id", { count: "exact", head: true })
       .eq("estado", "pendiente_revision");
     setPendientes(count || 0);
+    setRefrescando(false);
   }
 
   const shellStyle = {
@@ -50,7 +53,12 @@ export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, o
             <p style={{ margin: "1px 0 0", fontSize: 17, fontWeight: 700 }}>{tecnico}</p>
           </div>
         </div>
-        <button onClick={onSalir} style={{ fontSize: 12, fontWeight: 600, padding: "9px 15px", background: SURF, border: "none", borderRadius: 20, color: MUTED }}>Cambiar</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={cargarPendientes} aria-label="Actualizar" style={{ width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: refrescando ? "rotate(180deg)" : "none", transition: "transform .4s ease" }}><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+          <button onClick={onSalir} style={{ fontSize: 12, fontWeight: 600, padding: "9px 15px", background: SURF, border: "none", borderRadius: 20, color: MUTED }}>Cambiar</button>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
