@@ -12,7 +12,10 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
   const [unidades, setUnidades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [estadoActual, setEstadoActual] = useState(batch.estado);
+  const [esDevuelto, setEsDevuelto] = useState(false);
+  const [notaRevision, setNotaRevision] = useState("");
   const [mostrarCompletado, setMostrarCompletado] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
 
   useEffect(() => {
     cargar();
@@ -20,6 +23,19 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
 
   async function cargar() {
     setLoading(true);
+
+    // Estado real + info de revisión (por si fue devuelto por el supervisor)
+    const { data: meta } = await supabase
+      .from("batches")
+      .select("estado, revisado_at, nota_revision")
+      .eq("id", batch.id)
+      .single();
+    const estadoDb = meta?.estado || batch.estado;
+    const devuelto = !!meta?.revisado_at && (estadoDb === "abierto" || estadoDb === "recibido");
+    setEstadoActual(estadoDb);
+    setEsDevuelto(devuelto);
+    setNotaRevision(meta?.nota_revision || "");
+
     const { data: batchItems } = await supabase
       .from("batch_items")
       .select("modelo_codigo, cantidad_declarada")
@@ -39,11 +55,21 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     const completadas = (unidadesData || []).length;
     const completo = declarado > 0 && completadas >= declarado;
 
-    if (completo && estadoActual !== "pendiente_revision" && estadoActual !== "cerrado") {
+    // Auto-enviar a revisión SOLO en la primera vez que se completa.
+    // Si fue devuelto, NO rebota: el técnico decide cuándo reenviar.
+    if (completo && !devuelto && estadoDb !== "pendiente_revision" && estadoDb !== "cerrado") {
       await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
       setEstadoActual("pendiente_revision");
       setMostrarCompletado(true);
     }
+  }
+
+  async function reenviarRevision() {
+    setReenviando(true);
+    await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
+    setReenviando(false);
+    setEstadoActual("pendiente_revision");
+    setMostrarCompletado(true);
   }
 
   const progreso = items.map((it) => {
@@ -101,9 +127,9 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
           <div style={{ width: 60, height: 60, borderRadius: 30, background: "#e6f0dd", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2f5c17" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
           </div>
-          <p style={{ fontSize: 19, fontWeight: 700, margin: "18px 0 8px", color: TEXT }}>Transferencia completada</p>
+          <p style={{ fontSize: 19, fontWeight: 700, margin: "18px 0 8px", color: TEXT }}>Enviada a revisión</p>
           <p style={{ fontSize: 13, color: MUTED, margin: "0 0 24px", lineHeight: 1.55 }}>
-            Reparaste todas las unidades de la transferencia #{batch.numero_transferencia}. Queda pendiente de revisión por el supervisor.
+            La transferencia #{batch.numero_transferencia} quedó pendiente de revisión por el supervisor.
           </p>
           <button
             onClick={onBack}
@@ -135,6 +161,19 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
         <>
           {/* Área que scrollea por dentro */}
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+            {/* Aviso de devuelto por el supervisor */}
+            {esDevuelto && (
+              <div style={{ background: "#fff8ef", border: "1px solid #f0c67a", borderRadius: 16, padding: 16, marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: notaRevision ? 10 : 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93650f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 5 5v2"></path></svg>
+                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#93650f" }}>Devuelto por el supervisor</span>
+                </div>
+                {notaRevision && (
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: TEXT }}>{notaRevision}</p>
+                )}
+              </div>
+            )}
+
             <p style={seccionLabel}>Cantidad producto por arreglar</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
               {progreso.map((p) => {
@@ -174,7 +213,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
           </div>
 
           {/* Botón anclado abajo, siempre visible */}
-          {modelosDisponibles.length > 0 && (
+          {modelosDisponibles.length > 0 ? (
             <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
               <button
                 onClick={() => onRepararUnidad(batch, modelosDisponibles)}
@@ -183,7 +222,17 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
                 Comenzar reparación
               </button>
             </div>
-          )}
+          ) : esDevuelto ? (
+            <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
+              <button
+                onClick={reenviarRevision}
+                disabled={reenviando}
+                style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", opacity: reenviando ? 0.6 : 1 }}
+              >
+                {reenviando ? "Enviando..." : "Reenviar a revisión"}
+              </button>
+            </div>
+          ) : null}
         </>
       )}
     </div>
