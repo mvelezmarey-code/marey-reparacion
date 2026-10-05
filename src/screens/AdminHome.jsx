@@ -7,7 +7,7 @@ const MUTED = "#6b7685";
 const LINE = "#edf0f4";
 const SURF = "#f7f9fc";
 
-export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onVerPiezas, onSalir }) {
+export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, onVerLeaderboard, onVerReparaciones, onVerPiezas, onVerHistorial, onSalir }) {
   const [pendientes, setPendientes] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
   const inicial = (tecnico || "?").trim().charAt(0).toUpperCase();
@@ -101,6 +101,10 @@ export default function AdminHome({ tecnico, onVerRevision, onVerEstadisticas, o
           <button onClick={onVerLeaderboard} style={tile}>
             <div style={tileIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg></div>
             <span style={tileLabel}>Ranking de técnicos</span>
+          </button>
+          <button onClick={onVerHistorial} style={tile}>
+            <div style={tileIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg></div>
+            <span style={tileLabel}>Historial de batches</span>
           </button>
         </div>
       </div>
