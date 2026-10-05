@@ -19,6 +19,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [catalogoDecisiones, setCatalogoDecisiones] = useState([]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [verificando, setVerificando] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [escaneando, setEscaneando] = useState(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
@@ -67,6 +68,16 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return "";
   }
 
+  // Verifica que el serial no exista ya en NINGUNA unidad, ni como old_sn ni como new_sn.
+  // excluirId: para cuando se edita una unidad (no chocar consigo misma).
+  async function serialYaExiste(serial, excluirId) {
+    if (!serial) return false;
+    let q = supabase.from("unidades").select("id").or(`old_sn.eq.${serial},new_sn.eq.${serial}`);
+    if (excluirId) q = q.neq("id", excluirId);
+    const { data } = await q.limit(1);
+    return (data || []).length > 0;
+  }
+
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
   const tieneNinguna = piezas.includes("Ninguna");
 
@@ -78,24 +89,32 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     setEscaneando(destino);
   }
 
-  function siguiente() {
+  async function siguiente() {
     setError("");
-    if (paso === 2) {
-      if (!oldSnNa) {
-        if (!oldSn.trim()) {
-          setError("Escanea el serial o marca que no tiene número de serie.");
-          return;
-        }
-        if (oldSn.length !== LARGO_SERIAL) {
-          setError(`El número de serie debe tener exactamente ${LARGO_SERIAL} dígitos.`);
-          return;
-        }
+
+    if (paso === 2 && !oldSnNa) {
+      if (!oldSn.trim()) {
+        setError("Escanea el serial o marca que no tiene número de serie.");
+        return;
+      }
+      if (oldSn.length !== LARGO_SERIAL) {
+        setError(`El número de serie debe tener exactamente ${LARGO_SERIAL} dígitos.`);
+        return;
+      }
+      setVerificando(true);
+      const existe = await serialYaExiste(oldSn.trim());
+      setVerificando(false);
+      if (existe) {
+        setError("Ese número de serie ya está registrado en otra unidad.");
+        return;
       }
     }
+
     if (paso === 3 && piezas.length === 0) {
       setError("Selecciona al menos una pieza dañada, o 'Ninguna'.");
       return;
     }
+
     if (paso === TOTAL_PASOS) {
       if (!decision) {
         setError("Selecciona una decisión.");
@@ -114,10 +133,22 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
           setError(`El nuevo número de serie debe tener exactamente ${LARGO_SERIAL} dígitos.`);
           return;
         }
+        if (newSn.trim() === oldSn.trim() && !oldSnNa) {
+          setError("El nuevo número de serie no puede ser igual al viejo.");
+          return;
+        }
+        setVerificando(true);
+        const existe = await serialYaExiste(newSn.trim());
+        setVerificando(false);
+        if (existe) {
+          setError("Ese número de serie nuevo ya está registrado en otra unidad.");
+          return;
+        }
       }
       setMostrarConfirmacion(true);
       return;
     }
+
     setPaso(paso + 1);
   }
 
@@ -145,7 +176,9 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     });
     setGuardando(false);
     if (errInsert) {
-      setError(errInsert.message);
+      // Respaldo: si el constraint de la base atrapa un duplicado, mensaje amigable
+      const dup = /duplicate|unique/i.test(errInsert.message || "");
+      setError(dup ? "Ese número de serie ya está registrado. Revísalo." : errInsert.message);
       setMostrarConfirmacion(false);
       return;
     }
@@ -361,8 +394,8 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
 
       {error && <p style={{ fontSize: 13, color: "#a32d2d", margin: "12px 0 0", textAlign: "center" }}>{error}</p>}
 
-      <button onClick={siguiente} style={{ ...botonPrimario, marginTop: 20 }}>
-        {paso === TOTAL_PASOS ? "Revisar y confirmar" : "Continuar"}
+      <button onClick={siguiente} disabled={verificando || guardando} style={{ ...botonPrimario, marginTop: 20, opacity: verificando ? 0.6 : 1 }}>
+        {verificando ? "Verificando..." : paso === TOTAL_PASOS ? "Revisar y confirmar" : "Continuar"}
       </button>
     </div>
   );
