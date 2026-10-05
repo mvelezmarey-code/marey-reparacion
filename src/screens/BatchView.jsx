@@ -19,10 +19,13 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
 
   useEffect(() => {
     cargar();
+    // Auto-refresh "en vivo": recarga silenciosa cada 10s mientras el batch está abierto
+    const id = setInterval(() => cargar(true), 10000);
+    return () => clearInterval(id);
   }, [batch.id]);
 
-  async function cargar() {
-    setLoading(true);
+  async function cargar(silent = false) {
+    if (!silent) setLoading(true);
 
     // Estado real + info de revisión (por si fue devuelto por el supervisor)
     const { data: meta } = await supabase
@@ -56,8 +59,9 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
     const completo = declarado > 0 && completadas >= declarado;
 
     // Auto-enviar a revisión SOLO en la primera vez que se completa.
+    // En refresco silencioso NO se auto-envía (para no sacar el modal a otro técnico).
     // Si fue devuelto, NO rebota: el técnico decide cuándo reenviar.
-    if (completo && !devuelto && estadoDb !== "pendiente_revision" && estadoDb !== "cerrado") {
+    if (!silent && completo && !devuelto && estadoDb !== "pendiente_revision" && estadoDb !== "cerrado") {
       await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
       setEstadoActual("pendiente_revision");
       setMostrarCompletado(true);
