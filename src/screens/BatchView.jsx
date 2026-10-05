@@ -7,7 +7,7 @@ const MUTED = "#6b7685";
 const LINE = "#edf0f4";
 const SURF = "#f7f9fc";
 
-export default function BatchView({ batch, onBack, onRepararUnidad }) {
+export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnidad }) {
   const [items, setItems] = useState([]);
   const [unidades, setUnidades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -201,18 +201,35 @@ export default function BatchView({ batch, onBack, onRepararUnidad }) {
             <p style={seccionLabel}>Historial de reparación</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 6 }}>
               {unidades.length === 0 && <p style={{ fontSize: 13, color: MUTED }}>Sin unidades reparadas todavía.</p>}
-              {unidades.map((u) => (
-                <div key={u.id} style={{ ...tarjeta, padding: 13 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600 }}>
-                    <span>{u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}</span>
-                    <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>{u.decision}</span>
+              {unidades.map((u) => {
+                const editable = (estadoActual === "abierto" || estadoActual === "recibido") && typeof onEditarUnidad === "function";
+                const contenido = (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 600, gap: 10 }}>
+                      <span>{u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>{u.decision}</span>
+                        {editable && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
+                        )}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: MUTED, margin: "5px 0 0", textAlign: "left" }}>
+                      {(u.piezas_danadas || []).join(", ")}
+                      {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
+                    </p>
+                  </>
+                );
+                return editable ? (
+                  <button key={u.id} onClick={() => onEditarUnidad(u)} style={{ ...tarjeta, padding: 13, width: "100%", textAlign: "left", cursor: "pointer", display: "block" }}>
+                    {contenido}
+                  </button>
+                ) : (
+                  <div key={u.id} style={{ ...tarjeta, padding: 13 }}>
+                    {contenido}
                   </div>
-                  <p style={{ fontSize: 11, color: MUTED, margin: "5px 0 0" }}>
-                    {(u.piezas_danadas || []).join(", ")}
-                    {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
