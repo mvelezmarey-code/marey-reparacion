@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import FotoHoja from "../components/FotoHoja";
 
 const NAVY = "#0f3d63";
 const TEXT = "#10151c";
@@ -14,8 +15,11 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
   const [estadoActual, setEstadoActual] = useState(batch.estado);
   const [esDevuelto, setEsDevuelto] = useState(false);
   const [notaRevision, setNotaRevision] = useState("");
+  const [completo, setCompleto] = useState(false);
+  const [mostrarFinal, setMostrarFinal] = useState(false);
+  const [hojaFinalUrl, setHojaFinalUrl] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const [mostrarCompletado, setMostrarCompletado] = useState(false);
-  const [reenviando, setReenviando] = useState(false);
 
   useEffect(() => {
     cargar();
@@ -27,7 +31,6 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
   async function cargar(silent = false) {
     if (!silent) setLoading(true);
 
-    // Estado real + info de revisión (por si fue devuelto por el supervisor)
     const { data: meta } = await supabase
       .from("batches")
       .select("estado, revisado_at, nota_revision")
@@ -52,27 +55,24 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
 
     setItems(batchItems || []);
     setUnidades(unidadesData || []);
-    setLoading(false);
 
     const declarado = (batchItems || []).reduce((a, i) => a + i.cantidad_declarada, 0);
     const completadas = (unidadesData || []).length;
-    const completo = declarado > 0 && completadas >= declarado;
+    setCompleto(declarado > 0 && completadas >= declarado);
 
-    // Auto-enviar a revisión SOLO en la primera vez que se completa.
-    // En refresco silencioso NO se auto-envía (para no sacar el modal a otro técnico).
-    // Si fue devuelto, NO rebota: el técnico decide cuándo reenviar.
-    if (!silent && completo && !devuelto && estadoDb !== "pendiente_revision" && estadoDb !== "cerrado") {
-      await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
-      setEstadoActual("pendiente_revision");
-      setMostrarCompletado(true);
-    }
+    if (!silent) setLoading(false);
   }
 
-  async function reenviarRevision() {
-    setReenviando(true);
-    await supabase.from("batches").update({ estado: "pendiente_revision" }).eq("id", batch.id);
-    setReenviando(false);
+  async function enviarRevisionFinal() {
+    if (!hojaFinalUrl) return;
+    setEnviando(true);
+    await supabase
+      .from("batches")
+      .update({ estado: "pendiente_revision", hoja_final_url: hojaFinalUrl })
+      .eq("id", batch.id);
+    setEnviando(false);
     setEstadoActual("pendiente_revision");
+    setMostrarFinal(false);
     setMostrarCompletado(true);
   }
 
@@ -82,48 +82,32 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
   });
 
   const modelosDisponibles = progreso.filter((p) => p.pendientes > 0);
+  const enProceso = estadoActual === "abierto" || estadoActual === "recibido";
+  const puedeFinalizar = completo && enProceso;
 
   const estadoLabel = {
-    recibido: "En proceso",
-    abierto: "En proceso",
-    pendiente_revision: "Pendiente de revisión",
-    cerrado: "Cerrado",
+    recibido: "En proceso", abierto: "En proceso",
+    pendiente_revision: "Pendiente de revisión", cerrado: "Cerrado",
   };
   const estadoBg = {
-    recibido: "#eef4fb",
-    abierto: "#eef4fb",
-    pendiente_revision: "#fdf0dc",
-    cerrado: "#e6f0dd",
+    recibido: "#eef4fb", abierto: "#eef4fb",
+    pendiente_revision: "#fdf0dc", cerrado: "#e6f0dd",
   };
   const estadoColor = {
-    recibido: NAVY,
-    abierto: NAVY,
-    pendiente_revision: "#93650f",
-    cerrado: "#2f5c17",
+    recibido: NAVY, abierto: NAVY,
+    pendiente_revision: "#93650f", cerrado: "#2f5c17",
   };
 
   const shellStyle = {
-    height: "100dvh",
-    maxWidth: 480,
-    margin: "0 auto",
-    padding: "18px 20px 0",
-    display: "flex",
-    flexDirection: "column",
-    boxSizing: "border-box",
-    background: "#fff",
-    color: TEXT,
-    overflow: "hidden",
-    WebkitFontSmoothing: "antialiased",
+    height: "100dvh", maxWidth: 480, margin: "0 auto", padding: "18px 20px 0",
+    display: "flex", flexDirection: "column", boxSizing: "border-box",
+    background: "#fff", color: TEXT, overflow: "hidden", WebkitFontSmoothing: "antialiased",
   };
-  const seccionLabel = {
-    fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5,
-    textTransform: "uppercase", margin: "0 0 10px",
-  };
-  const tarjeta = {
-    background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16,
-    boxShadow: "0 2px 10px rgba(16,32,53,0.05)", flexShrink: 0,
-  };
+  const seccionLabel = { fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 10px" };
+  const tarjeta = { background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16, boxShadow: "0 2px 10px rgba(16,32,53,0.05)", flexShrink: 0 };
+  const backBtn = { width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" };
 
+  // ---------- Modal: completado ----------
   if (mostrarCompletado) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(15,32,53,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
@@ -135,10 +119,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
           <p style={{ fontSize: 13, color: MUTED, margin: "0 0 24px", lineHeight: 1.55 }}>
             La transferencia #{batch.numero_transferencia} quedó pendiente de revisión por el supervisor.
           </p>
-          <button
-            onClick={onBack}
-            style={{ width: "100%", padding: 15, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14 }}
-          >
+          <button onClick={onBack} style={{ width: "100%", padding: 15, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14 }}>
             Volver al inicio
           </button>
         </div>
@@ -146,11 +127,49 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
     );
   }
 
+  // ---------- Pantalla: foto final ----------
+  if (mostrarFinal) {
+    return (
+      <div style={shellStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexShrink: 0 }}>
+          <button onClick={() => setMostrarFinal(false)} aria-label="Volver" style={backBtn}>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+          </button>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>Foto final de la hoja</span>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#e6f0dd", borderRadius: 16, padding: 16, marginBottom: 22 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 20, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f5c17" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#2f5c17" }}>Todas las unidades están listas</p>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#3b6d2b" }}>Toma la foto de la hoja marcada para enviar a revisión.</p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 10px" }}>
+            <p style={{ ...seccionLabel, margin: 0 }}>Foto final de la hoja de almacén</p>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#8a2d2d", background: "#fbe3e3", borderRadius: 10, padding: "3px 8px" }}>OBLIGATORIA</span>
+          </div>
+          <FotoHoja prefijo={`hoja-final-${batch.id}`} etiqueta="Tomar foto final" onSubida={setHojaFinalUrl} urlActual={hojaFinalUrl || null} />
+        </div>
+
+        <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
+          <button onClick={enviarRevisionFinal} disabled={!hojaFinalUrl || enviando} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", opacity: (!hojaFinalUrl || enviando) ? 0.5 : 1 }}>
+            {enviando ? "Enviando..." : "Enviar a revisión"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Vista principal ----------
   return (
     <div style={shellStyle}>
-      {/* Header fijo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexShrink: 0 }}>
-        <button onClick={onBack} aria-label="Volver" style={{ width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button onClick={onBack} aria-label="Volver" style={backBtn}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
         </button>
         <span style={{ fontSize: 17, fontWeight: 700, flex: 1 }}>Transferencia #{batch.numero_transferencia}</span>
@@ -163,18 +182,14 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
         <p style={{ fontSize: 13, color: MUTED }}>Cargando...</p>
       ) : (
         <>
-          {/* Área que scrollea por dentro */}
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
-            {/* Aviso de devuelto por el supervisor */}
             {esDevuelto && (
               <div style={{ background: "#fff8ef", border: "1px solid #f0c67a", borderRadius: 16, padding: 16, marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: notaRevision ? 10 : 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93650f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 5 5v2"></path></svg>
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#93650f" }}>Devuelto por el supervisor</span>
                 </div>
-                {notaRevision && (
-                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: TEXT }}>{notaRevision}</p>
-                )}
+                {notaRevision && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: TEXT }}>{notaRevision}</p>}
               </div>
             )}
 
@@ -186,9 +201,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
                   <div key={p.modelo_codigo} style={{ ...tarjeta, padding: "13px 15px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{p.modelo_codigo}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: p.pendientes === 0 ? "#2f5c17" : NAVY }}>
-                        {p.completadas}/{p.cantidad_declarada}
-                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: p.pendientes === 0 ? "#2f5c17" : NAVY }}>{p.completadas}/{p.cantidad_declarada}</span>
                     </div>
                     <div style={{ background: SURF, borderRadius: 6, height: 6, overflow: "hidden" }}>
                       <div style={{ background: p.pendientes === 0 ? "#2f5c17" : NAVY, height: "100%", width: `${pct}%`, borderRadius: 6 }} />
@@ -202,7 +215,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
             <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 6 }}>
               {unidades.length === 0 && <p style={{ fontSize: 13, color: MUTED }}>Sin unidades reparadas todavía.</p>}
               {unidades.map((u) => {
-                const editable = (estadoActual === "abierto" || estadoActual === "recibido") && typeof onEditarUnidad === "function";
+                const editable = enProceso && typeof onEditarUnidad === "function";
                 const contenido = (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 600, gap: 10 }}>
@@ -221,36 +234,25 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
                   </>
                 );
                 return editable ? (
-                  <button key={u.id} onClick={() => onEditarUnidad(u)} style={{ ...tarjeta, padding: 13, width: "100%", textAlign: "left", cursor: "pointer", display: "block" }}>
-                    {contenido}
-                  </button>
+                  <button key={u.id} onClick={() => onEditarUnidad(u)} style={{ ...tarjeta, padding: 13, width: "100%", textAlign: "left", cursor: "pointer", display: "block" }}>{contenido}</button>
                 ) : (
-                  <div key={u.id} style={{ ...tarjeta, padding: 13 }}>
-                    {contenido}
-                  </div>
+                  <div key={u.id} style={{ ...tarjeta, padding: 13 }}>{contenido}</div>
                 );
               })}
             </div>
           </div>
 
-          {/* Botón anclado abajo, siempre visible */}
+          {/* Botón anclado abajo */}
           {modelosDisponibles.length > 0 ? (
             <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
-              <button
-                onClick={() => onRepararUnidad(batch, modelosDisponibles)}
-                style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" }}
-              >
+              <button onClick={() => onRepararUnidad(batch, modelosDisponibles)} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" }}>
                 Comenzar reparación
               </button>
             </div>
-          ) : esDevuelto ? (
+          ) : puedeFinalizar ? (
             <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
-              <button
-                onClick={reenviarRevision}
-                disabled={reenviando}
-                style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", opacity: reenviando ? 0.6 : 1 }}
-              >
-                {reenviando ? "Enviando..." : "Reenviar a revisión"}
+              <button onClick={() => { setHojaFinalUrl(""); setMostrarFinal(true); }} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" }}>
+                Finalizar y enviar a revisión
               </button>
             </div>
           ) : null}
