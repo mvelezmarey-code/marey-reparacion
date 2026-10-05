@@ -7,14 +7,17 @@ const DECISIONES_QUE_REQUIEREN_NEW_SN = ["Refurbished", "Nuevo"];
 const TOTAL_PASOS = 4;
 const LARGO_SERIAL = 11;
 
-export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack, onGuardada }) {
+export default function UnidadForm({ batch, modelosDisponibles = [], tecnico, rol = "tecnico", unidadEditar = null, onBack, onGuardada }) {
+  const editando = !!unidadEditar;
+
   const [paso, setPaso] = useState(1);
-  const [modelo, setModelo] = useState(modelosDisponibles[0]?.modelo_codigo || "");
-  const [oldSn, setOldSn] = useState("");
-  const [oldSnNa, setOldSnNa] = useState(false);
-  const [newSn, setNewSn] = useState("");
-  const [piezas, setPiezas] = useState([]);
-  const [decision, setDecision] = useState("");
+  const [modelo, setModelo] = useState(unidadEditar?.modelo_codigo || modelosDisponibles[0]?.modelo_codigo || "");
+  const [oldSn, setOldSn] = useState(unidadEditar?.old_sn || "");
+  const [oldSnNa, setOldSnNa] = useState(unidadEditar?.old_sn_na || false);
+  const [newSn, setNewSn] = useState(unidadEditar?.new_sn || "");
+  const [piezas, setPiezas] = useState(unidadEditar?.piezas_danadas || []);
+  const [decision, setDecision] = useState(unidadEditar?.decision || "");
+  const [motivo, setMotivo] = useState("");
   const [catalogoPiezas, setCatalogoPiezas] = useState([]);
   const [catalogoDecisiones, setCatalogoDecisiones] = useState([]);
   const [error, setError] = useState("");
@@ -24,6 +27,9 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   const [escaneando, setEscaneando] = useState(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [startedAt] = useState(() => new Date().toISOString());
+
+  // En edición el modelo queda fijo (cambiarlo descuadraría los conteos del batch)
+  const listaModelos = editando ? [{ modelo_codigo: modelo }] : modelosDisponibles;
 
   useEffect(() => {
     cargarCatalogo();
@@ -56,29 +62,23 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     });
   }
 
-  // Tolerante: nunca revienta aunque le llegue algo que no sea string
   function limpiarSerial(valor) {
     return String(valor ?? "").replace(/\D/g, "").slice(0, LARGO_SERIAL);
   }
 
-  // Acepta tanto un string ("250840...") como un objeto { serial, modelo }
   function tomarSerial(resultado) {
     if (typeof resultado === "string") return resultado;
     if (resultado && typeof resultado === "object") return resultado.serial || "";
     return "";
   }
 
-  // Verifica que el serial no exista ya en NINGUNA unidad, ni como old_sn ni como new_sn.
-  // Usa la función serial_existe (SECURITY DEFINER) para ver TODAS las filas sin que RLS la tape.
-  // excluirId: para cuando se edita una unidad (no chocar consigo misma).
-  async function serialYaExiste(serial, excluirId) {
+  async function serialYaExiste(serial) {
     if (!serial) return false;
     const { data, error } = await supabase.rpc("serial_existe", {
       p_serial: serial,
-      p_excluir: excluirId || null,
+      p_excluir: unidadEditar?.id || null,
     });
     if (error) {
-      // Si la función aún no está creada o falla, el constraint de la base queda de respaldo
       console.warn("serial_existe RPC error:", error.message);
       return false;
     }
@@ -94,6 +94,24 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
 
   function abrirEscaneo(destino) {
     setEscaneando(destino);
+  }
+
+  // Construye un resumen legible de lo que cambió, para la bitácora
+  function construirResumen(antes, despues) {
+    const partes = [];
+    if ((antes.decision || "") !== (despues.decision || "")) {
+      partes.push(`Decisión: ${antes.decision || "—"} → ${despues.decision || "—"}`);
+    }
+    const pa = (antes.piezas_danadas || []).join(", ");
+    const pd = (despues.piezas_danadas || []).join(", ");
+    if (pa !== pd) partes.push(`Piezas: ${pa || "—"} → ${pd || "—"}`);
+    const sa = antes.old_sn_na ? "sin serial" : (antes.old_sn || "—");
+    const sd = despues.old_sn_na ? "sin serial" : (despues.old_sn || "—");
+    if (sa !== sd) partes.push(`Serial: ${sa} → ${sd}`);
+    if ((antes.new_sn || "") !== (despues.new_sn || "")) {
+      partes.push(`Nuevo SN: ${antes.new_sn || "—"} → ${despues.new_sn || "—"}`);
+    }
+    return partes.join("; ") || "Sin cambios de campos";
   }
 
   async function siguiente() {
@@ -169,26 +187,68 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   }
 
   async function guardar() {
+    // En edición, el motivo del cambio es obligatorio (bitácora)
+    if (editando && !motivo.trim()) {
+      setError("Escribe el motivo del cambio.");
+      return;
+    }
+
     setGuardando(true);
-    const { error: errInsert } = await supabase.from("unidades").insert({
-      batch_id: batch.id,
+
+    const campos = {
       modelo_codigo: modelo,
       old_sn: oldSnNa ? null : oldSn.trim(),
       old_sn_na: oldSnNa,
       new_sn: requiereNewSn ? newSn.trim() : null,
-      tecnico_nombre: tecnico,
       piezas_danadas: piezas,
       decision,
-      started_at: startedAt,
-    });
-    setGuardando(false);
-    if (errInsert) {
-      // Respaldo: si el constraint de la base atrapa un duplicado, mensaje amigable
-      const dup = /duplicate|unique/i.test(errInsert.message || "");
-      setError(dup ? "Ese número de serie ya está registrado. Revísalo." : errInsert.message);
+    };
+
+    let err;
+    if (editando) {
+      const { error: errUpd } = await supabase.from("unidades").update(campos).eq("id", unidadEditar.id);
+      err = errUpd;
+    } else {
+      const { error: errIns } = await supabase.from("unidades").insert({
+        ...campos,
+        batch_id: batch.id,
+        tecnico_nombre: tecnico,
+        started_at: startedAt,
+      });
+      err = errIns;
+    }
+
+    if (err) {
+      setGuardando(false);
+      const dup = /duplicate|unique/i.test(err.message || "");
+      setError(dup ? "Ese número de serie ya está registrado. Revísalo." : err.message);
       setMostrarConfirmacion(false);
       return;
     }
+
+    // Registrar en la bitácora si fue una edición
+    if (editando) {
+      const antes = {
+        decision: unidadEditar.decision,
+        piezas_danadas: unidadEditar.piezas_danadas,
+        old_sn: unidadEditar.old_sn,
+        old_sn_na: unidadEditar.old_sn_na,
+        new_sn: unidadEditar.new_sn,
+      };
+      await supabase.from("unidad_cambios").insert({
+        unidad_id: unidadEditar.id,
+        batch_id: unidadEditar.batch_id || batch?.id || null,
+        modelo_codigo: modelo,
+        resumen: construirResumen(antes, campos),
+        antes,
+        despues: campos,
+        motivo: motivo.trim(),
+        editado_por: tecnico || "—",
+        rol,
+      });
+    }
+
+    setGuardando(false);
     onGuardada();
   }
 
@@ -235,8 +295,6 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     );
   }
 
-  // Ayuda opcional: se abre encima del formulario y al cerrar vuelve al mismo paso,
-  // con todo lo que el técnico ya había marcado.
   if (mostrarAyuda) {
     return (
       <Asistente
@@ -251,21 +309,40 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
     return (
       <div style={shellStyle}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <p style={{ fontSize: 19, fontWeight: 700, margin: "0 0 20px", textAlign: "center" }}>¿Confirmas esta información?</p>
-          <div style={{ background: "#f7f6f2", borderRadius: 16, padding: 20, marginBottom: 24 }}>
+          <p style={{ fontSize: 19, fontWeight: 700, margin: "0 0 20px", textAlign: "center" }}>
+            {editando ? "¿Confirmas los cambios?" : "¿Confirmas esta información?"}
+          </p>
+          <div style={{ background: "#f7f6f2", borderRadius: 16, padding: 20, marginBottom: 20 }}>
             <Fila label="Modelo" valor={modelo} />
             <Fila label="Serial" valor={oldSnNa ? "Sin serial" : oldSn} />
             <Fila label="Piezas" valor={piezas.join(", ")} />
             <Fila label="Decisión" valor={decision} />
             {requiereNewSn && <Fila label="Nuevo SN" valor={newSn} ultimo />}
           </div>
+
+          {editando && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7685", letterSpacing: 0.5, textTransform: "uppercase", margin: 0 }}>Motivo del cambio</p>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#8a2d2d", background: "#fbe3e3", borderRadius: 10, padding: "3px 8px" }}>OBLIGATORIO</span>
+              </div>
+              <textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Ej. El tanque estaba perforado, no servía para refurbished."
+                rows={2}
+                style={{ ...inputStyle, resize: "none", fontFamily: "inherit" }}
+              />
+            </div>
+          )}
+
           {error && <p style={{ fontSize: 13, color: "#a32d2d", marginBottom: 16, textAlign: "center" }}>{error}</p>}
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setMostrarConfirmacion(false)} disabled={guardando} style={{ ...botonSecundario, flex: 1 }}>
               Revisar
             </button>
             <button onClick={guardar} disabled={guardando} style={{ ...botonPrimario, flex: 1 }}>
-              {guardando ? "Guardando..." : "Confirmar"}
+              {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Confirmar"}
             </button>
           </div>
         </div>
@@ -278,7 +355,9 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
         <button onClick={anterior} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e4e2da", background: "#fff" }}>←</button>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 12, color: "#999", fontWeight: 600 }}>PASO {paso} DE {TOTAL_PASOS}</p>
+          <p style={{ margin: 0, fontSize: 12, color: "#999", fontWeight: 600 }}>
+            {editando ? `EDITANDO UNIDAD · PASO ${paso} DE ${TOTAL_PASOS}` : `PASO ${paso} DE ${TOTAL_PASOS}`}
+          </p>
         </div>
         <button
           onClick={() => setMostrarAyuda(true)}
@@ -299,10 +378,17 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
         {paso === 1 && (
           <>
             <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>¿Qué calentador es?</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>Solo modelos pendientes de este batch</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 24px" }}>
+              {editando ? "El modelo no se puede cambiar al editar" : "Solo modelos pendientes de este batch"}
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {modelosDisponibles.map((m) => (
-                <button key={m.modelo_codigo} onClick={() => setModelo(m.modelo_codigo)} style={chip(modelo === m.modelo_codigo, false)}>
+              {listaModelos.map((m) => (
+                <button
+                  key={m.modelo_codigo}
+                  onClick={() => !editando && setModelo(m.modelo_codigo)}
+                  disabled={editando}
+                  style={chip(modelo === m.modelo_codigo, editando && modelo !== m.modelo_codigo)}
+                >
                   {m.modelo_codigo}
                 </button>
               ))}
@@ -402,7 +488,7 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
       {error && <p style={{ fontSize: 13, color: "#a32d2d", margin: "12px 0 0", textAlign: "center" }}>{error}</p>}
 
       <button onClick={siguiente} disabled={verificando || guardando} style={{ ...botonPrimario, marginTop: 20, opacity: verificando ? 0.6 : 1 }}>
-        {verificando ? "Verificando..." : paso === TOTAL_PASOS ? "Revisar y confirmar" : "Continuar"}
+        {verificando ? "Verificando..." : paso === TOTAL_PASOS ? (editando ? "Revisar cambios" : "Revisar y confirmar") : "Continuar"}
       </button>
     </div>
   );
