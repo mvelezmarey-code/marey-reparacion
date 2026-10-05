@@ -188,10 +188,6 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
           <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Reparaciones del equipo</span>
         </button>
-        <button onClick={onVerEstadisticas} style={tile}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg>
-          <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Estadísticas completas</span>
-        </button>
         <button onClick={onVerAsistente} style={tile}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
           <span style={{ fontSize: 12, fontWeight: 600, textAlign: "center", color: TEXT, lineHeight: 1.25 }}>Videos y guías</span>
