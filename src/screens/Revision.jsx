@@ -39,6 +39,7 @@ export default function Revision({ onBack, tecnico }) {
   const [unidades, setUnidades] = useState([]);
   const [itemsDetalle, setItemsDetalle] = useState([]);
   const [cambios, setCambios] = useState([]);
+  const [hojas, setHojas] = useState({ inicial: null, final: null });
   const [unidadEditar, setUnidadEditar] = useState(null);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [nota, setNota] = useState("");
@@ -105,9 +106,15 @@ export default function Revision({ onBack, tecnico }) {
       .select("*")
       .eq("batch_id", batch.id)
       .order("created_at", { ascending: false });
+    const { data: b } = await supabase
+      .from("batches")
+      .select("hoja_inicial_url, hoja_final_url")
+      .eq("id", batch.id)
+      .single();
     setUnidades(u || []);
     setItemsDetalle(it || []);
     setCambios(logs || []);
+    setHojas({ inicial: b?.hoja_inicial_url || null, final: b?.hoja_final_url || null });
     setCargandoDetalle(false);
   }
 
@@ -116,6 +123,7 @@ export default function Revision({ onBack, tecnico }) {
     setUnidades([]);
     setItemsDetalle([]);
     setCambios([]);
+    setHojas({ inicial: null, final: null });
     setUnidadEditar(null);
     setNota("");
     cargar();
@@ -215,6 +223,35 @@ export default function Revision({ onBack, tecnico }) {
                   <span style={chip("", true)}>{totUnidades} unidades</span>
                 </div>
               </div>
+
+              {/* Hoja de almacén: antes / después */}
+              {(hojas.inicial || hojas.final) && (
+                <>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase" }}>Hoja de almacén</p>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+                    <div style={{ flex: 1 }}>
+                      {hojas.inicial ? (
+                        <a href={hojas.inicial} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 12, overflow: "hidden", border: `1px solid ${LINE}` }}>
+                          <img src={hojas.inicial} alt="Hoja antes" style={{ width: "100%", height: 120, objectFit: "cover", display: "block" }} />
+                        </a>
+                      ) : (
+                        <div style={{ height: 120, borderRadius: 12, background: SURF, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: MUTED }}>Sin foto</div>
+                      )}
+                      <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, textAlign: "center", color: MUTED }}>Antes</p>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      {hojas.final ? (
+                        <a href={hojas.final} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 12, overflow: "hidden", border: `1px solid ${LINE}` }}>
+                          <img src={hojas.final} alt="Hoja después" style={{ width: "100%", height: 120, objectFit: "cover", display: "block" }} />
+                        </a>
+                      ) : (
+                        <div style={{ height: 120, borderRadius: 12, background: SURF, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: MUTED }}>Sin foto</div>
+                      )}
+                      <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 700, textAlign: "center", color: MUTED }}>Después</p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase" }}>
                 Unidades reparadas · {unidades.length}
