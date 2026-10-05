@@ -24,6 +24,7 @@ export default function App() {
   const [vista, setVista] = useState("home");
   const [batchActivo, setBatchActivo] = useState(null);
   const [modelosParaFormulario, setModelosParaFormulario] = useState([]);
+  const [unidadAEditar, setUnidadAEditar] = useState(null);
   const [restaurando, setRestaurando] = useState(true);
 
   useEffect(() => {
@@ -78,7 +79,12 @@ export default function App() {
         batch={batchActivo}
         onBack={() => setVista("home")}
         onRepararUnidad={(batch, modelos) => {
+          setUnidadAEditar(null);
           setModelosParaFormulario(modelos);
+          setVista("unidad");
+        }}
+        onEditarUnidad={(unidad) => {
+          setUnidadAEditar(unidad);
           setVista("unidad");
         }}
       />
@@ -91,10 +97,16 @@ export default function App() {
         batch={batchActivo}
         modelosDisponibles={modelosParaFormulario}
         tecnico={tecnico}
-        onBack={() => setVista("batch")}
+        rol={esAdmin ? "supervisor" : "tecnico"}
+        unidadEditar={unidadAEditar}
+        onBack={() => {
+          setUnidadAEditar(null);
+          setVista("batch");
+        }}
         onGuardada={() => {
           localStorage.removeItem(CLAVE_BATCH_ACTIVO);
           localStorage.removeItem(CLAVE_MODELOS_FORM);
+          setUnidadAEditar(null);
           setVista("batch");
         }}
       />
@@ -136,6 +148,7 @@ export default function App() {
   if (vista === "revision") {
     return (
       <Revision
+        tecnico={tecnico}
         onBack={() => setVista("admin")}
         onVerResumen={(batch) => {
           setBatchActivo(batch);
