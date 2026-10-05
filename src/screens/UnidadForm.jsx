@@ -69,13 +69,20 @@ export default function UnidadForm({ batch, modelosDisponibles, tecnico, onBack,
   }
 
   // Verifica que el serial no exista ya en NINGUNA unidad, ni como old_sn ni como new_sn.
+  // Usa la función serial_existe (SECURITY DEFINER) para ver TODAS las filas sin que RLS la tape.
   // excluirId: para cuando se edita una unidad (no chocar consigo misma).
   async function serialYaExiste(serial, excluirId) {
     if (!serial) return false;
-    let q = supabase.from("unidades").select("id").or(`old_sn.eq.${serial},new_sn.eq.${serial}`);
-    if (excluirId) q = q.neq("id", excluirId);
-    const { data } = await q.limit(1);
-    return (data || []).length > 0;
+    const { data, error } = await supabase.rpc("serial_existe", {
+      p_serial: serial,
+      p_excluir: excluirId || null,
+    });
+    if (error) {
+      // Si la función aún no está creada o falla, el constraint de la base queda de respaldo
+      console.warn("serial_existe RPC error:", error.message);
+      return false;
+    }
+    return data === true;
   }
 
   const requiereNewSn = DECISIONES_QUE_REQUIEREN_NEW_SN.includes(decision);
