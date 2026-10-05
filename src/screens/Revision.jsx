@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import UnidadForm from "./UnidadForm";
 
 const NAVY = "#0f3d63";
 const TEXT = "#10151c";
@@ -28,7 +29,7 @@ function fechaCorta(iso) {
   return `${d.toLocaleDateString("es-PR", { day: "numeric", month: "short" })} ${hora}`;
 }
 
-export default function Revision({ onBack }) {
+export default function Revision({ onBack, tecnico }) {
   const [batches, setBatches] = useState([]);
   const [itemsPorBatch, setItemsPorBatch] = useState({});
   const [tecnicoPorBatch, setTecnicoPorBatch] = useState({});
@@ -37,6 +38,8 @@ export default function Revision({ onBack }) {
   const [detalle, setDetalle] = useState(null);
   const [unidades, setUnidades] = useState([]);
   const [itemsDetalle, setItemsDetalle] = useState([]);
+  const [cambios, setCambios] = useState([]);
+  const [unidadEditar, setUnidadEditar] = useState(null);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [nota, setNota] = useState("");
   const [procesando, setProcesando] = useState(false);
@@ -97,8 +100,14 @@ export default function Revision({ onBack }) {
       .from("batch_items")
       .select("modelo_codigo, cantidad_declarada")
       .eq("batch_id", batch.id);
+    const { data: logs } = await supabase
+      .from("unidad_cambios")
+      .select("*")
+      .eq("batch_id", batch.id)
+      .order("created_at", { ascending: false });
     setUnidades(u || []);
     setItemsDetalle(it || []);
+    setCambios(logs || []);
     setCargandoDetalle(false);
   }
 
@@ -106,6 +115,8 @@ export default function Revision({ onBack }) {
     setDetalle(null);
     setUnidades([]);
     setItemsDetalle([]);
+    setCambios([]);
+    setUnidadEditar(null);
     setNota("");
     cargar();
   }
@@ -158,6 +169,23 @@ export default function Revision({ onBack }) {
     return (items || []).reduce((a, it) => a + (it.cantidad_declarada || 0), 0);
   }
 
+  // ---------- EDICIÓN DE UNIDAD (admin) ----------
+  if (unidadEditar) {
+    return (
+      <UnidadForm
+        batch={detalle}
+        unidadEditar={unidadEditar}
+        tecnico={tecnico}
+        rol="supervisor"
+        onBack={() => setUnidadEditar(null)}
+        onGuardada={() => {
+          setUnidadEditar(null);
+          abrirDetalle(detalle);
+        }}
+      />
+    );
+  }
+
   // ---------- VISTA DETALLE ----------
   if (detalle) {
     const totUnidades = totalUnidades(itemsDetalle);
@@ -197,16 +225,19 @@ export default function Revision({ onBack }) {
                   const col = colorDecision(u.decision);
                   const serial = u.old_sn_na ? "sin serial" : u.old_sn;
                   return (
-                    <div key={u.id} style={{ border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", boxShadow: "0 2px 10px rgba(16,32,53,0.04)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13, fontWeight: 700 }}>
+                    <button key={u.id} onClick={() => setUnidadEditar(u)} style={{ border: `1px solid ${LINE}`, borderRadius: 14, padding: "13px 14px", boxShadow: "0 2px 10px rgba(16,32,53,0.04)", background: "#fff", textAlign: "left", width: "100%", cursor: "pointer", display: "block" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 700 }}>
                         <span>{u.modelo_codigo} · {serial}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: col.c, background: col.b, borderRadius: 12, padding: "3px 9px", flexShrink: 0 }}>{u.decision}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: col.c, background: col.b, borderRadius: 12, padding: "3px 9px" }}>{u.decision}</span>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
+                        </span>
                       </div>
-                      <p style={{ margin: "5px 0 0", fontSize: 11, color: MUTED }}>
+                      <p style={{ margin: "5px 0 0", fontSize: 11, color: MUTED, textAlign: "left" }}>
                         {(u.piezas_danadas || []).join(", ")}
                         {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
                       </p>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -222,6 +253,28 @@ export default function Revision({ onBack }) {
                 rows={2}
                 style={{ width: "100%", boxSizing: "border-box", border: `1px solid #e6e8ec`, borderRadius: 13, padding: 13, fontSize: 14, color: TEXT, resize: "none", fontFamily: "inherit", marginBottom: 6 }}
               />
+
+              {/* Bitácora de cambios (audit trail) */}
+              {cambios.length > 0 && (
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 12px" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l3 2"></path></svg>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase", margin: 0 }}>Bitácora de cambios</p>
+                  </div>
+                  <div style={{ borderLeft: `2px solid ${LINE}`, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+                    {cambios.map((c) => (
+                      <div key={c.id}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>
+                          {c.editado_por} ({c.rol === "supervisor" ? "supervisor" : "técnico"}) · {c.modelo_codigo}
+                        </p>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: TEXT }}>{c.resumen}</p>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: MUTED, fontStyle: "italic" }}>Motivo: "{c.motivo}"</p>
+                        <p style={{ margin: "4px 0 0", fontSize: 11, color: "#98a1ae" }}>{fechaCorta(c.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Acciones ancladas */}
