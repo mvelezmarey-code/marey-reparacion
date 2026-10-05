@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import FotoHoja from "../components/FotoHoja";
 
 const NAVY = "#0f3d63";
 const TEXT = "#10151c";
@@ -11,6 +12,7 @@ const MODELOS = ["PP110", "PP220", "ECO070", "ECO085", "ECO110", "GA5FLP", "GA6F
 
 export default function NuevoBatch({ onBack, onCreado }) {
   const [numero, setNumero] = useState("");
+  const [hojaUrl, setHojaUrl] = useState("");
   const [items, setItems] = useState([{ modelo: MODELOS[0], cantidad: 1 }]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -64,6 +66,10 @@ export default function NuevoBatch({ onBack, onCreado }) {
       setError("No puedes repetir el mismo modelo dos veces.");
       return;
     }
+    if (!hojaUrl) {
+      setError("Toma la foto de la hoja de almacén (es obligatoria).");
+      return;
+    }
     setError("");
     setMostrarConfirmacion(true);
   }
@@ -73,7 +79,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
     try {
       const { data: batch, error: errBatch } = await supabase
         .from("batches")
-        .insert({ numero_transferencia: numero.trim(), estado: "abierto" })
+        .insert({ numero_transferencia: numero.trim(), estado: "abierto", hoja_inicial_url: hojaUrl })
         .select()
         .single();
 
@@ -191,6 +197,14 @@ export default function NuevoBatch({ onBack, onCreado }) {
           placeholder="TR-4900"
           style={{ ...inputStyle, marginBottom: 24 }}
         />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 10px" }}>
+          <p style={{ ...seccionLabel, margin: 0 }}>Hoja de almacén</p>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#8a2d2d", background: "#fbe3e3", borderRadius: 10, padding: "3px 8px" }}>OBLIGATORIA</span>
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <FotoHoja prefijo="hoja-inicial" etiqueta="Tomar foto de la hoja" onSubida={setHojaUrl} urlActual={hojaUrl || null} />
+        </div>
 
         <p style={seccionLabel}>Productos que se van a reparar</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
