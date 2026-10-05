@@ -171,6 +171,7 @@ export default function App() {
         onVerLeaderboard={() => setVista("leaderboard")}
         onVerReparaciones={() => setVista("reparaciones")}
         onVerPiezas={() => setVista("piezas")}
+        onVerHistorial={() => setVista("historial")}
         onSalir={() => setTecnico(null)}
       />
     );
