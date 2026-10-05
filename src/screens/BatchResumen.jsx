@@ -16,6 +16,13 @@ function agrupar(arr, campo) {
   return Object.entries(conteo).map(([nombre, cantidad]) => ({ nombre, cantidad }));
 }
 
+function fechaCorta(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("es-PR", {
+    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function TablaPivot({ titulo, columnaLabel, filas, notaColor }) {
   const total = filas.reduce((a, f) => a + f.cantidad, 0);
   return (
@@ -51,6 +58,8 @@ function TablaPivot({ titulo, columnaLabel, filas, notaColor }) {
 
 export default function BatchResumen({ batch, onBack }) {
   const [unidades, setUnidades] = useState([]);
+  const [cambios, setCambios] = useState([]);
+  const [hojas, setHojas] = useState({ inicial: null, final: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,7 +73,22 @@ export default function BatchResumen({ batch, onBack }) {
       .select("*")
       .eq("batch_id", batch.id)
       .order("created_at", { ascending: true });
+
+    const { data: logs } = await supabase
+      .from("unidad_cambios")
+      .select("*")
+      .eq("batch_id", batch.id)
+      .order("created_at", { ascending: false });
+
+    const { data: b } = await supabase
+      .from("batches")
+      .select("hoja_inicial_url, hoja_final_url")
+      .eq("id", batch.id)
+      .single();
+
     setUnidades(data || []);
+    setCambios(logs || []);
+    setHojas({ inicial: b?.hoja_inicial_url || null, final: b?.hoja_final_url || null });
     setLoading(false);
   }
 
@@ -105,6 +129,11 @@ export default function BatchResumen({ batch, onBack }) {
   const estadoBg = { recibido: "#eaf0f7", abierto: "#eaf0f7", pendiente_revision: "#fdf0dc", cerrado: "#e6f0dd" };
   const estadoColor = { recibido: "#0f3d63", abierto: "#0f3d63", pendiente_revision: "#93650f", cerrado: "#2f5c17" };
 
+  const hojaBox = { flex: 1, minWidth: 0 };
+  const hojaImg = { width: "100%", height: 120, objectFit: "cover", display: "block" };
+  const hojaLink = { display: "block", borderRadius: 12, overflow: "hidden", border: "1px solid #e4e2da" };
+  const hojaVacia = { ...hojaLink, height: 120, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#b4b2ab", fontSize: 12 };
+
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", padding: 20, background: "#f5f4f1", minHeight: "100vh", boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -119,6 +148,37 @@ export default function BatchResumen({ batch, onBack }) {
         <p style={{ fontSize: 13, color: "#999" }}>Cargando...</p>
       ) : (
         <>
+          {/* Hoja de almacén: antes / después */}
+          {(hojas.inicial || hojas.final) && (
+            <>
+              <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "0 0 8px" }}>
+                Hoja de almacén
+              </p>
+              <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
+                <div style={hojaBox}>
+                  <p style={{ fontSize: 11, color: "#666", fontWeight: 600, margin: "0 0 6px" }}>Antes</p>
+                  {hojas.inicial ? (
+                    <a href={hojas.inicial} target="_blank" rel="noreferrer" style={hojaLink}>
+                      <img src={hojas.inicial} alt="Hoja antes" style={hojaImg} />
+                    </a>
+                  ) : (
+                    <div style={hojaVacia}>Sin foto</div>
+                  )}
+                </div>
+                <div style={hojaBox}>
+                  <p style={{ fontSize: 11, color: "#666", fontWeight: 600, margin: "0 0 6px" }}>Después</p>
+                  {hojas.final ? (
+                    <a href={hojas.final} target="_blank" rel="noreferrer" style={hojaLink}>
+                      <img src={hojas.final} alt="Hoja después" style={hojaImg} />
+                    </a>
+                  ) : (
+                    <div style={hojaVacia}>Sin foto</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           <TablaPivot titulo="Calentadores por modelo" columnaLabel="Modelo" filas={porModelo} />
 
           <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "18px 0 2px" }}>
@@ -191,6 +251,27 @@ export default function BatchResumen({ batch, onBack }) {
               );
             })}
           </div>
+
+          {/* Bitácora de cambios (audit trail) */}
+          {cambios.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <p style={{ fontSize: 12, color: "#999", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", margin: "0 0 12px" }}>
+                Bitácora de cambios
+              </p>
+              <div style={{ borderLeft: "2px solid #e4e2da", paddingLeft: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+                {cambios.map((c) => (
+                  <div key={c.id}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#222" }}>
+                      {c.editado_por} ({c.rol === "supervisor" ? "supervisor" : "técnico"}) · {c.modelo_codigo}
+                    </p>
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#222" }}>{c.resumen}</p>
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#666", fontStyle: "italic" }}>Motivo: "{c.motivo}"</p>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#98a1ae" }}>{fechaCorta(c.created_at)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
