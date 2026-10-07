@@ -7,14 +7,57 @@ const MUTED = "#6b7685";
 const LINE = "#edf0f4";
 const SURF = "#f7f9fc";
 
+const MEDALLA = [
+  { bg: "#f0b429", fg: "#3a2a00" },
+  { bg: "#e3e8ee", fg: TEXT },
+  { bg: "#f1dcc6", fg: TEXT },
+];
+
+function inicioDeMes() {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function nombreMes() {
+  const m = new Date().toLocaleDateString("es-PR", { month: "long" });
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
+function mismoNombre(a, b) {
+  return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+}
+
 export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistorial, onVerEstadisticas, onVerReparaciones, onVerAsistente, onSalir }) {
   const [batches, setBatches] = useState([]);
   const [progreso, setProgreso] = useState({}); // batch_id -> { hechas, total }
+  const [top3, setTop3] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     cargarBatches();
   }, []);
+
+  async function cargarTop3() {
+    const { data } = await supabase
+      .from("unidades")
+      .select("tecnico_nombre")
+      .gte("created_at", inicioDeMes().toISOString())
+      .not("tecnico_nombre", "is", null)
+      .limit(5000);
+    const conteo = {};
+    (data || []).forEach((u) => {
+      const n = String(u.tecnico_nombre || "").trim();
+      if (!n) return;
+      conteo[n] = (conteo[n] || 0) + 1;
+    });
+    const ranking = Object.entries(conteo)
+      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad || a.nombre.localeCompare(b.nombre))
+      .slice(0, 3);
+    setTop3(ranking);
+  }
 
   async function cargarBatches() {
     setLoading(true);
@@ -45,6 +88,8 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
     } else {
       setProgreso({});
     }
+
+    await cargarTop3();
     setLoading(false);
   }
 
@@ -180,6 +225,39 @@ export default function Home({ tecnico, onOpenBatch, onNuevoBatch, onVerHistoria
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, background: "#eef4fb", borderRadius: 20, padding: "5px 12px" }}>{historialCount}</span>
         </button>
+
+        {/* Top 3 del mes */}
+        <div style={{ background: "#fff", border: `1px solid ${LINE}`, borderRadius: 18, padding: "14px 16px 10px", boxShadow: "0 2px 10px rgba(16,32,53,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M7 6H4a2 2 0 0 0 0 4h3"></path><path d="M17 6h3a2 2 0 0 1 0 4h-3"></path></svg>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: MUTED }}>Top 3 del mes</span>
+            </div>
+            <span style={{ fontSize: 11, color: "#98a1ae" }}>{nombreMes()}</span>
+          </div>
+
+          {top3.length === 0 ? (
+            <p style={{ margin: "4px 0 8px", fontSize: 13, color: MUTED }}>Aún no hay reparaciones este mes.</p>
+          ) : (
+            top3.map((t, i) => {
+              const esTu = mismoNombre(t.nombre, tecnico);
+              const m = MEDALLA[i] || MEDALLA[2];
+              return (
+                <div key={t.nombre} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 10px", borderRadius: 12, background: esTu ? "#eef4fb" : "transparent", marginBottom: i < top3.length - 1 ? 6 : 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 14, background: m.bg, color: m.fg, fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: esTu ? 700 : 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.nombre}</span>
+                    {esTu && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: NAVY, background: "#fff", border: "1px solid #cfdbe8", borderRadius: 10, padding: "2px 7px", flexShrink: 0 }}>Tú</span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: NAVY }}>{t.cantidad}</span>
+                  <span style={{ fontSize: 11, color: MUTED, marginLeft: -6 }}>{t.cantidad === 1 ? "arreglado" : "arreglados"}</span>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Accesos rápidos */}
