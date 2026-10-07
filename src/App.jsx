@@ -9,6 +9,7 @@ import BatchView from "./screens/BatchView";
 import UnidadForm from "./screens/UnidadForm";
 import Estadisticas from "./screens/Estadisticas";
 import BatchResumen from "./screens/BatchResumen";
+import BatchProgreso from "./screens/BatchProgreso";
 import Revision from "./screens/Revision";
 import Leaderboard from "./screens/Leaderboard";
 import Historial from "./screens/Historial";
@@ -129,6 +130,10 @@ export default function App() {
     return <BatchResumen batch={batchActivo} onBack={() => setVista("historial")} />;
   }
 
+  if (vista === "progreso" && batchActivo && esAdmin) {
+    return <BatchProgreso batch={batchActivo} onBack={() => setVista("admin")} />;
+  }
+
   if (vista === "estadisticas") {
     return <Estadisticas onBack={() => setVista(esAdmin ? "admin" : "home")} />;
   }
@@ -167,6 +172,10 @@ export default function App() {
       <AdminHome
         tecnico={tecnico}
         onVerRevision={() => setVista("revision")}
+        onVerProgreso={(batch) => {
+          setBatchActivo(batch);
+          setVista("progreso");
+        }}
         onVerEstadisticas={() => setVista("estadisticas")}
         onVerLeaderboard={() => setVista("leaderboard")}
         onVerReparaciones={() => setVista("reparaciones")}
