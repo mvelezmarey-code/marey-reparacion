@@ -17,6 +17,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [pickerIndex, setPickerIndex] = useState(null); // índice del item cuyo modelo se está escogiendo
 
   function modelosDisponiblesPara(indiceActual) {
     const yaUsados = items.filter((_, i) => i !== indiceActual).map((it) => it.modelo);
@@ -48,8 +49,14 @@ export default function NuevoBatch({ onBack, onCreado }) {
       setError("");
     }
     const copia = [...items];
-    copia[i][campo] = valor;
+    copia[i] = { ...copia[i], [campo]: valor };
     setItems(copia);
+  }
+
+  function escogerModelo(m) {
+    if (pickerIndex === null) return;
+    actualizar(pickerIndex, "modelo", m);
+    setPickerIndex(null);
   }
 
   function validarYPedirConfirmacion() {
@@ -57,7 +64,7 @@ export default function NuevoBatch({ onBack, onCreado }) {
       setError("Escribe el número de transferencia.");
       return;
     }
-    if (items.some((it) => !it.cantidad || it.cantidad < 1)) {
+    if (items.some((it) => !it.cantidad || Number(it.cantidad) < 1)) {
       setError("Cada modelo necesita una cantidad válida.");
       return;
     }
@@ -210,21 +217,22 @@ export default function NuevoBatch({ onBack, onCreado }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {items.map((it, i) => (
             <div key={i} style={{ display: "flex", gap: 8 }}>
-              <select
-                value={it.modelo}
-                onChange={(e) => actualizar(i, "modelo", e.target.value)}
-                style={{ ...inputStyle, flex: 2 }}
+              {/* Selector de modelo (propio, no el select nativo) */}
+              <button
+                type="button"
+                onClick={() => setPickerIndex(i)}
+                style={{ ...inputStyle, flex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", cursor: "pointer" }}
               >
-                {modelosDisponiblesPara(i).map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+                <span style={{ fontWeight: 600 }}>{it.modelo}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10l5 5 5-5"></path></svg>
+              </button>
               <input
                 type="number"
+                inputMode="numeric"
                 min="1"
                 value={it.cantidad}
                 onChange={(e) => actualizar(i, "cantidad", e.target.value)}
-                style={{ ...inputStyle, flex: 1 }}
+                style={{ ...inputStyle, flex: 1, textAlign: "center" }}
               />
               {items.length > 1 && (
                 <button onClick={() => quitarModelo(i)} aria-label="Quitar modelo" style={{ padding: "0 15px", borderRadius: 13, border: `1px solid ${LINE}`, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -252,6 +260,41 @@ export default function NuevoBatch({ onBack, onCreado }) {
           Confirmar recepción del batch
         </button>
       </div>
+
+      {/* Hoja para escoger el modelo */}
+      {pickerIndex !== null && (
+        <div onClick={() => setPickerIndex(null)} style={{ position: "fixed", inset: 0, background: "rgba(15,32,53,0.45)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "22px 22px 0 0", padding: "14px 20px calc(18px + env(safe-area-inset-bottom))", boxSizing: "border-box", maxHeight: "75dvh", display: "flex", flexDirection: "column" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "#d7dde5", margin: "0 auto 14px" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>¿Qué modelo es?</p>
+              <button onClick={() => setPickerIndex(null)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 14px", background: SURF, border: "none", borderRadius: 20, color: MUTED }}>Cerrar</button>
+            </div>
+            <div style={{ overflowY: "auto", minHeight: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              {modelosDisponiblesPara(pickerIndex).map((m) => {
+                const activo = items[pickerIndex] && items[pickerIndex].modelo === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => escogerModelo(m)}
+                    style={{
+                      width: "100%", padding: "15px 16px", fontSize: 16, fontWeight: 700, textAlign: "left",
+                      borderRadius: 14, border: activo ? `2px solid ${NAVY}` : `1px solid ${LINE}`,
+                      background: activo ? "#eef4fb" : "#fff", color: activo ? NAVY : TEXT,
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                    }}
+                  >
+                    {m}
+                    {activo && (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
