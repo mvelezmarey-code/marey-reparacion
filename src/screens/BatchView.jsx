@@ -8,6 +8,67 @@ const MUTED = "#6b7685";
 const LINE = "#edf0f4";
 const SURF = "#f7f9fc";
 
+function contar(arr, fn) {
+  const c = {};
+  arr.forEach((x) => {
+    const vals = fn(x);
+    (Array.isArray(vals) ? vals : [vals]).forEach((v) => {
+      if (!v) return;
+      c[v] = (c[v] || 0) + 1;
+    });
+  });
+  return Object.entries(c).map(([nombre, cantidad]) => ({ nombre, cantidad })).sort((a, b) => b.cantidad - a.cantidad);
+}
+
+function chipDecision(d) {
+  if (d === "Refurbished") return { bg: "#edf7ea", fg: "#2b5a1f" };
+  if (d === "Descartar" || d === "Dummy") return { bg: "#fbe3e3", fg: "#8a2d2d" };
+  return { bg: "#e7eef7", fg: NAVY };
+}
+
+function Tag({ decision }) {
+  const c = chipDecision(decision);
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, borderRadius: 10, padding: "4px 9px", whiteSpace: "nowrap" }}>
+      {decision || "Sin decisión"}
+    </span>
+  );
+}
+
+function TablaPivot({ titulo, columna, filas, conTag = false }) {
+  const total = filas.reduce((a, f) => a + f.cantidad, 0);
+  return (
+    <>
+      <p style={{ fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 8px" }}>{titulo}</p>
+      <div style={{ background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16, boxShadow: "0 2px 10px rgba(16,32,53,0.05)", overflow: "hidden", marginBottom: 14 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: SURF }}>
+              <th style={{ textAlign: "left", fontSize: 11, fontWeight: 700, color: MUTED, padding: "9px 14px" }}>{columna}</th>
+              <th style={{ textAlign: "right", fontSize: 11, fontWeight: 700, color: MUTED, padding: "9px 14px" }}>Cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.length === 0 && (
+              <tr><td colSpan={2} style={{ padding: "10px 14px", color: MUTED, borderTop: `1px solid ${LINE}` }}>Sin registros todavía</td></tr>
+            )}
+            {filas.map((f) => (
+              <tr key={f.nombre}>
+                <td style={{ padding: "9px 14px", borderTop: `1px solid ${LINE}` }}>{conTag ? <Tag decision={f.nombre} /> : f.nombre}</td>
+                <td style={{ padding: "9px 14px", borderTop: `1px solid ${LINE}`, textAlign: "right", fontWeight: 600 }}>{f.cantidad}</td>
+              </tr>
+            ))}
+            <tr style={{ background: "#eaf0f7" }}>
+              <td style={{ padding: "9px 14px", borderTop: `1px solid ${LINE}`, color: NAVY, fontWeight: 800 }}>Total</td>
+              <td style={{ padding: "9px 14px", borderTop: `1px solid ${LINE}`, textAlign: "right", color: NAVY, fontWeight: 800 }}>{total}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnidad }) {
   const [items, setItems] = useState([]);
   const [unidades, setUnidades] = useState([]);
@@ -16,6 +77,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
   const [esDevuelto, setEsDevuelto] = useState(false);
   const [notaRevision, setNotaRevision] = useState("");
   const [completo, setCompleto] = useState(false);
+  const [mostrarResumen, setMostrarResumen] = useState(false);
   const [mostrarFinal, setMostrarFinal] = useState(false);
   const [hojaFinalUrl, setHojaFinalUrl] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -23,7 +85,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
 
   useEffect(() => {
     cargar();
-    // Auto-refresh "en vivo": recarga silenciosa cada 10s mientras el batch está abierto
+    // Auto-refresh "en vivo": recarga silenciosa cada 10s
     const id = setInterval(() => cargar(true), 10000);
     return () => clearInterval(id);
   }, [batch.id]);
@@ -81,9 +143,15 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
     return { ...it, completadas, pendientes: it.cantidad_declarada - completadas };
   });
 
+  const total = items.reduce((a, i) => a + i.cantidad_declarada, 0);
+  const hechas = unidades.length;
   const modelosDisponibles = progreso.filter((p) => p.pendientes > 0);
   const enProceso = estadoActual === "abierto" || estadoActual === "recibido";
   const puedeFinalizar = completo && enProceso;
+
+  const porDecision = contar(unidades, (u) => u.decision);
+  const porPieza = contar(unidades, (u) => u.piezas_danadas || []).filter((p) => p.nombre !== "Ninguna");
+  const porTecnico = contar(unidades, (u) => u.tecnico_nombre || "Sin registrar");
 
   const estadoLabel = {
     recibido: "En proceso", abierto: "En proceso",
@@ -103,9 +171,11 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
     display: "flex", flexDirection: "column", boxSizing: "border-box",
     background: "#fff", color: TEXT, overflow: "hidden", WebkitFontSmoothing: "antialiased",
   };
-  const seccionLabel = { fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 10px" };
+  const seccionLabel = { fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 8px" };
   const tarjeta = { background: "#fff", border: `1px solid ${LINE}`, borderRadius: 16, boxShadow: "0 2px 10px rgba(16,32,53,0.05)", flexShrink: 0 };
   const backBtn = { width: 40, height: 40, borderRadius: 20, background: SURF, border: "none", display: "flex", alignItems: "center", justifyContent: "center" };
+  const footer = { flexShrink: 0, paddingTop: 12, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" };
+  const botonPrimario = { width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" };
 
   // ---------- Modal: completado ----------
   if (mostrarCompletado) {
@@ -127,12 +197,92 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
     );
   }
 
+  // ---------- Pantalla: reporte completo / resumen antes de enviar ----------
+  if (mostrarResumen) {
+    return (
+      <div style={shellStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexShrink: 0 }}>
+          <button onClick={() => setMostrarResumen(false)} aria-label="Volver" style={backBtn}>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+          </button>
+          <span style={{ fontSize: 17, fontWeight: 700, flex: 1 }}>{puedeFinalizar ? "Resumen del batch" : "Reporte hasta ahora"}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: NAVY, background: "#eef4fb", borderRadius: 20, padding: "6px 12px" }}>#{batch.numero_transferencia}</span>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: puedeFinalizar ? "#e6f0dd" : "#eef4fb", borderRadius: 16, padding: 16, marginBottom: 18 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 20, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {puedeFinalizar ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f5c17" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l3 2"></path></svg>
+              )}
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: puedeFinalizar ? "#2f5c17" : NAVY }}>{hechas} de {total} unidades listas</p>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: puedeFinalizar ? "#3b6d2b" : MUTED }}>
+                {puedeFinalizar ? "Revisa que todo esté bien antes de enviar el batch." : "El batch sigue en progreso. Esto se actualiza solo."}
+              </p>
+            </div>
+          </div>
+
+          <p style={seccionLabel}>Por modelo</p>
+          <div style={{ ...tarjeta, padding: "4px 15px", marginBottom: 14 }}>
+            {progreso.map((p, i) => (
+              <div key={p.modelo_codigo} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: i === 0 ? "none" : `1px solid ${LINE}`, fontSize: 14 }}>
+                <span style={{ fontWeight: 600 }}>{p.modelo_codigo}</span>
+                <span style={{ fontWeight: 700, color: p.pendientes === 0 ? "#2f5c17" : NAVY }}>{p.completadas}/{p.cantidad_declarada}</span>
+              </div>
+            ))}
+          </div>
+
+          <TablaPivot titulo="Decisiones" columna="Decisión" filas={porDecision} conTag />
+          <TablaPivot titulo="Piezas dañadas" columna="Pieza" filas={porPieza} />
+          <TablaPivot titulo="Por técnico" columna="Técnico" filas={porTecnico} />
+
+          <p style={seccionLabel}>Unidades ({unidades.length})</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+            {unidades.map((u) => (
+              <div key={u.id} style={{ ...tarjeta, padding: "10px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}
+                  </p>
+                  <p style={{ margin: "3px 0 0", fontSize: 11, color: MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {(u.piezas_danadas || []).join(", ") || "Sin piezas"}{u.tecnico_nombre ? ` · ${u.tecnico_nombre}` : ""}
+                  </p>
+                </div>
+                <Tag decision={u.decision} />
+              </div>
+            ))}
+          </div>
+
+          {puedeFinalizar && (
+            <div style={{ background: "#fff7e6", border: "1px solid #f3dca6", borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+              <p style={{ margin: 0, fontSize: 12, color: "#7a5a12", lineHeight: 1.45 }}>
+                ¿Algo está mal? Vuelve atrás y toca el lápiz en la unidad para corregirla (te pedirá el motivo).
+              </p>
+            </div>
+          )}
+        </div>
+
+        {puedeFinalizar && (
+          <div style={footer}>
+            <button onClick={() => { setMostrarResumen(false); setHojaFinalUrl(""); setMostrarFinal(true); }} style={botonPrimario}>
+              Todo correcto, enviar batch
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ---------- Pantalla: foto final ----------
   if (mostrarFinal) {
     return (
       <div style={shellStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexShrink: 0 }}>
-          <button onClick={() => setMostrarFinal(false)} aria-label="Volver" style={backBtn}>
+          <button onClick={() => { setMostrarFinal(false); setMostrarResumen(true); }} aria-label="Volver" style={backBtn}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
           </button>
           <span style={{ fontSize: 17, fontWeight: 700 }}>Foto final de la hoja</span>
@@ -156,8 +306,8 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
           <FotoHoja prefijo={`hoja-final-${batch.id}`} etiqueta="Tomar foto final" onSubida={setHojaFinalUrl} urlActual={hojaFinalUrl || null} />
         </div>
 
-        <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
-          <button onClick={enviarRevisionFinal} disabled={!hojaFinalUrl || enviando} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)", opacity: (!hojaFinalUrl || enviando) ? 0.5 : 1 }}>
+        <div style={footer}>
+          <button onClick={enviarRevisionFinal} disabled={!hojaFinalUrl || enviando} style={{ ...botonPrimario, opacity: (!hojaFinalUrl || enviando) ? 0.5 : 1 }}>
             {enviando ? "Enviando..." : "Enviar a revisión"}
           </button>
         </div>
@@ -168,7 +318,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
   // ---------- Vista principal ----------
   return (
     <div style={shellStyle}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexShrink: 0 }}>
         <button onClick={onBack} aria-label="Volver" style={backBtn}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
         </button>
@@ -184,7 +334,7 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
         <>
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
             {esDevuelto && (
-              <div style={{ background: "#fff8ef", border: "1px solid #f0c67a", borderRadius: 16, padding: 16, marginBottom: 18 }}>
+              <div style={{ background: "#fff8ef", border: "1px solid #f0c67a", borderRadius: 16, padding: 16, marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: notaRevision ? 10 : 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93650f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 5 5v2"></path></svg>
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#93650f" }}>Devuelto por el supervisor</span>
@@ -193,12 +343,28 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
               </div>
             )}
 
+            {/* Total grande */}
+            <div style={{ background: NAVY, borderRadius: 16, padding: "14px 16px", color: "#fff", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.8 }}>Llevan en total</p>
+                <p style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
+                  {hechas} <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>de {total} arreglados</span>
+                </p>
+              </div>
+              <div style={{ textAlign: "right", fontSize: 12, opacity: 0.85, flexShrink: 0 }}>
+                {progreso.map((p) => (
+                  <div key={p.modelo_codigo}>{p.modelo_codigo} {p.completadas}/{p.cantidad_declarada}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Progreso por modelo */}
             <p style={seccionLabel}>Cantidad producto por arreglar</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
               {progreso.map((p) => {
-                const pct = Math.round((p.completadas / p.cantidad_declarada) * 100);
+                const pct = p.cantidad_declarada > 0 ? Math.round((p.completadas / p.cantidad_declarada) * 100) : 0;
                 return (
-                  <div key={p.modelo_codigo} style={{ ...tarjeta, padding: "13px 15px" }}>
+                  <div key={p.modelo_codigo} style={{ ...tarjeta, padding: "12px 15px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{p.modelo_codigo}</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: p.pendientes === 0 ? "#2f5c17" : NAVY }}>{p.completadas}/{p.cantidad_declarada}</span>
@@ -211,32 +377,45 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
               })}
             </div>
 
+            {/* Pivots en vivo */}
+            <TablaPivot titulo="Decisiones" columna="Decisión" filas={porDecision} conTag />
+            <TablaPivot titulo="Piezas dañadas" columna="Pieza" filas={porPieza} />
+
+            <button onClick={() => setMostrarResumen(true)} style={{ width: "100%", background: "transparent", border: "none", padding: "2px 2px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Ver reporte completo</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+            </button>
+
+            {/* Historial con tags */}
             <p style={seccionLabel}>Historial de reparación</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 6 }}>
               {unidades.length === 0 && <p style={{ fontSize: 13, color: MUTED }}>Sin unidades reparadas todavía.</p>}
               {unidades.map((u) => {
                 const editable = enProceso && typeof onEditarUnidad === "function";
                 const contenido = (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 600, gap: 10 }}>
-                      <span>{u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                        <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>{u.decision}</span>
-                        {editable && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
-                        )}
-                      </span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                    <div style={{ minWidth: 0, textAlign: "left" }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {u.modelo_codigo} · {u.old_sn_na ? "sin serial" : u.old_sn}
+                      </p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {(u.piezas_danadas || []).join(", ") || "Sin piezas"}
+                        {u.tecnico_nombre ? ` · ${u.tecnico_nombre}` : ""}
+                        {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
+                      </p>
                     </div>
-                    <p style={{ fontSize: 11, color: MUTED, margin: "5px 0 0", textAlign: "left" }}>
-                      {(u.piezas_danadas || []).join(", ")}
-                      {u.new_sn ? ` · nuevo SN: ${u.new_sn}` : ""}
-                    </p>
-                  </>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      <Tag decision={u.decision} />
+                      {editable && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
+                      )}
+                    </div>
+                  </div>
                 );
                 return editable ? (
-                  <button key={u.id} onClick={() => onEditarUnidad(u)} style={{ ...tarjeta, padding: 13, width: "100%", textAlign: "left", cursor: "pointer", display: "block" }}>{contenido}</button>
+                  <button key={u.id} onClick={() => onEditarUnidad(u)} style={{ ...tarjeta, padding: "12px 13px", width: "100%", cursor: "pointer", display: "block", color: TEXT }}>{contenido}</button>
                 ) : (
-                  <div key={u.id} style={{ ...tarjeta, padding: 13 }}>{contenido}</div>
+                  <div key={u.id} style={{ ...tarjeta, padding: "12px 13px" }}>{contenido}</div>
                 );
               })}
             </div>
@@ -244,14 +423,14 @@ export default function BatchView({ batch, onBack, onRepararUnidad, onEditarUnid
 
           {/* Botón anclado abajo */}
           {modelosDisponibles.length > 0 ? (
-            <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
-              <button onClick={() => onRepararUnidad(batch, modelosDisponibles)} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" }}>
+            <div style={footer}>
+              <button onClick={() => onRepararUnidad(batch, modelosDisponibles)} style={botonPrimario}>
                 Comenzar reparación
               </button>
             </div>
           ) : puedeFinalizar ? (
-            <div style={{ flexShrink: 0, paddingTop: 14, paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "#fff" }}>
-              <button onClick={() => { setHojaFinalUrl(""); setMostrarFinal(true); }} style={{ width: "100%", padding: 16, fontSize: 15, fontWeight: 700, background: NAVY, color: "#fff", border: "none", borderRadius: 14, boxShadow: "0 6px 18px rgba(15,61,99,0.22)" }}>
+            <div style={footer}>
+              <button onClick={() => setMostrarResumen(true)} style={botonPrimario}>
                 Finalizar y enviar a revisión
               </button>
             </div>
